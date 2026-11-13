@@ -284,6 +284,7 @@ window.addEventListener('error', e => {
 });
 (() => {
 'use strict';
+const APP_VERSION = 'v9';
 const $ = id => document.getElementById(id);
 const FUTURE_DAYS = 14;
 const MIN_PAST_DAYS = 6;
@@ -670,9 +671,10 @@ async function openCalendar() {
   }
   const foot = document.createElement('div');
   foot.className = 'storage';
+  foot.textContent = APP_VERSION;
   list.appendChild(foot);
   if (navigator.storage?.estimate) navigator.storage.estimate().then(e => {
-    foot.textContent = `${(e.usage / 1e6).toFixed(0)} MB used on this phone`;
+    foot.textContent = `${(e.usage / 1e6).toFixed(0)} MB used on this phone \u00b7 ${APP_VERSION}`;
   }).catch(() => {});
   // Open with yesterday as the top row (scroll up for older days).
   if (yesterdayRow) {
@@ -1055,9 +1057,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 function fitScreen() {
   const ih = window.innerHeight || 0;
   let h = ih;
-  if (standalone && matchMedia('(orientation: portrait)').matches) h = Math.max(ih, screen.height || 0);
-  // Never trust a tiny/zero reading (iPhones can report 0 for a moment at launch).
-  if (h < 300) { document.documentElement.style.removeProperty('--app-h'); return; }
+  if (standalone && matchMedia('(orientation: portrait)').matches) h = Math.max(ih, window.screen.height || 0);
+  // Never trust a tiny/zero/invalid reading (iPhones can report 0 for a moment at launch).
+  if (!Number.isFinite(h) || h < 300) { document.documentElement.style.removeProperty('--app-h'); return; }
   document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 fitScreen();
