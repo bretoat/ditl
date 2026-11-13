@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +13,7 @@
 <title>DITL</title>
 <style>
   :root {
-    --red: #ff3b30; --bg: #000; --row: #141416; --line: rgba(255,255,255,.08);
+    --red: #e0352b; --bg: #000; --row: #141416; --line: rgba(255,255,255,.08);
     --text: #f5f5f7; --dim: #8e8e93; --faint: #4a4a4f; --gold: #e3cfa8;
     --glass: rgba(20,20,22,.38); --hair: rgba(255,255,255,.16);
     --sans: "Avenir Next", "Avenir", "Helvetica Neue", -apple-system, system-ui, sans-serif;
@@ -27,12 +27,14 @@
     overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   .hidden { display: none !important; }
-  .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
+  .screen { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); display: none; flex-direction: column; overflow: hidden; }
   .screen.active { display: flex; }
   .caps { text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; }
 
   /* ---------- Camera ---------- */
-  #camera { background: #000; touch-action: manipulation; }
+  #camera, #camera * { touch-action: none; }  /* no browser zoom/pan on the camera screen; taps still work */
+  html, body { touch-action: manipulation; }
+  #camera { background: #000; }
   #preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000;
     transition: filter .35s var(--ease), opacity .35s var(--ease); }
   #preview.mirror { transform: scaleX(-1); }
@@ -45,7 +47,7 @@
     text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
   #recTimer { display: flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; letter-spacing: .12em; }
   #recTimer::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--red);
-    box-shadow: 0 0 8px var(--red); animation: blink 1.2s ease-in-out infinite; }
+    animation: blink 1.2s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: .25; } }
   .cam-controls { position: absolute; left: 0; right: 0; bottom: 0;
     padding: 40px 26px calc(var(--sb) + 26px); display: flex; align-items: center; justify-content: space-between;
@@ -65,29 +67,28 @@
   .act.same .glass-btn { background: rgba(255,255,255,.94); color: #000; border-color: transparent; }
   .act.same .caps { color: #fff; }
   .badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px;
-    border-radius: 9px; background: var(--red); font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
-    box-shadow: 0 2px 8px rgba(255,59,48,.45); }
+    border-radius: 9px; background: var(--red); font-size: 10.5px; font-weight: 700; display: grid; place-items: center; }
 
   /* record button */
-  .rec-btn { width: 84px; height: 84px; border-radius: 50%; position: relative; display: grid; place-items: center; }
-  .rec-btn .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(255,255,255,.96);
-    box-shadow: 0 6px 28px rgba(0,0,0,.35), inset 0 0 0 .5px rgba(0,0,0,.2);
+  .rec-btn { width: 86px; height: 86px; border-radius: 50%; position: relative; display: grid; place-items: center; }
+  .rec-btn .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #fff;
     transition: transform .35s var(--ease), border-color .35s var(--ease); }
-  .rec-btn .core { width: 68px; height: 68px; border-radius: 50%;
-    background: radial-gradient(120% 120% at 32% 25%, #ff7a6e 0%, #ff3b30 38%, #d71f15 72%, #a9120a 100%);
-    box-shadow: inset 0 1px 1.5px rgba(255,255,255,.45), inset 0 -3px 8px rgba(0,0,0,.28), 0 0 0 .5px rgba(0,0,0,.25);
-    transition: width .38s var(--ease), height .38s var(--ease), border-radius .38s var(--ease), transform .2s var(--ease); }
-  .rec-btn:active .core { transform: scale(.92); }
-  .rec-btn.recording .core { width: 30px; height: 30px; border-radius: 8px; }
-  .rec-btn.recording .ring { transform: scale(1.06); border-color: rgba(255,255,255,.75); }
+  .rec-btn .apple { width: 64px; height: 64px; object-fit: contain; pointer-events: none; -webkit-user-drag: none;
+    transition: transform .4s var(--ease), opacity .3s var(--ease); }
+  .rec-btn .stop { position: absolute; width: 30px; height: 30px; border-radius: 8px; background: var(--red);
+    transform: scale(.4); opacity: 0; transition: transform .4s var(--ease), opacity .3s var(--ease); }
+  .rec-btn:active .apple { transform: scale(.9); }
+  .rec-btn.recording .apple { transform: scale(.35) rotate(-14deg); opacity: 0; }
+  .rec-btn.recording .stop { transform: scale(1); opacity: 1; }
+  .rec-btn.recording .ring { transform: scale(1.05); }
   .rec-btn.recording::after { content: ""; position: absolute; inset: -6px; border-radius: 50%;
-    border: 1px solid rgba(255,59,48,.7); animation: halo 1.8s var(--ease) infinite; }
+    border: 1.5px solid var(--red); animation: halo 1.8s var(--ease) infinite; }
   @keyframes halo { 0% { transform: scale(.94); opacity: .9; } 100% { transform: scale(1.2); opacity: 0; } }
 
   .cam-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 32px; text-align: center; }
   .cam-msg div { max-width: 300px; }
   .cam-msg button { margin-top: 18px; background: #fff; color: #000; padding: 12px 22px; border-radius: 999px; }
-  .toast { position: absolute; left: 50%; bottom: calc(var(--sb) + 150px); transform: translate(-50%, 10px);
+  .toast { position: fixed; z-index: 40; left: 50%; bottom: calc(var(--sb) + 150px); transform: translate(-50%, 10px);
     opacity: 0; transition: all .3s var(--ease); pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   .install-tip { position: absolute; top: calc(var(--st) + 60px); left: 16px; right: 16px;
@@ -134,15 +135,50 @@
   .btn.primary { background: #fff; color: #000; border-color: #fff; }
   .btn:disabled { opacity: .3; }
 
+  /* day header + selection */
+  header.day-hdr { align-items: center; }
+  header.day-hdr h1 { font-size: 26px; }
+  .hdr-icon { width: 34px; height: 34px; display: grid; place-items: center; color: var(--gold); }
+  .hdr-icon svg { width: 24px; height: 24px; }
+  .clip { cursor: pointer; }
+  .clip .sel-mark { position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,.9); background: rgba(0,0,0,.25); display: none; place-items: center; }
+  .clip .sel-mark svg { width: 14px; height: 14px; opacity: 0; }
+  .selecting .clip .sel-mark { display: grid; }
+  .selecting .clip.selected .sel-mark { background: #fff; border-color: #fff; color: #000; }
+  .selecting .clip.selected .sel-mark svg { opacity: 1; }
+  .selecting .clip.selected img { opacity: .55; }
+  .clip-ov { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    opacity: 0; pointer-events: none; transition: opacity .22s var(--ease); }
+  .clip.open .clip-ov { opacity: 1; pointer-events: auto; }
+  .view-btn { background: #fff; color: #000; border-radius: 999px; padding: 10px 12px; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .14em; font-size: 9.5px; font-weight: 700; }
+  .trash-btn { position: absolute; bottom: 12%; left: 50%; transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; color: var(--red); background: rgba(0,0,0,.45); border: .5px solid var(--hair); }
+  .trash-btn svg { width: 18px; height: 18px; }
+  .sel-bar { justify-content: center; }
+  .del-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--red); padding: 2px 30px; }
+  .del-btn svg { width: 26px; height: 26px; }
+  .del-btn:disabled { opacity: .3; }
+  .btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
+  .sheet-wrap { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: #111113; border-top: .5px solid var(--hair); border-radius: 22px 22px 0 0;
+    padding: 24px 18px calc(var(--sb) + 16px); display: flex; flex-direction: column; gap: 10px; text-align: center;
+    animation: up .3s var(--ease); }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } }
+  .sheet-text { font: 400 24px/1.2 var(--serif); }
+  .sheet .note { margin-bottom: 8px; }
+
   /* ---------- Overlays ---------- */
-  .overlay { position: fixed; inset: 0; background: #000; z-index: 10; display: flex; flex-direction: column; }
+  .overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); background: #000; z-index: 10; display: flex; flex-direction: column; }
   .overlay video { flex: 1; width: 100%; min-height: 0; object-fit: contain; background: #000; }
   .ov-bar { display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px); }
   .ov-top { padding: calc(var(--st) + 14px) 20px 10px; display: flex; justify-content: space-between; align-items: center; }
   .export-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 16px; }
   .progress { width: 70%; height: 2px; border-radius: 1px; background: var(--line); overflow: hidden; }
   .progress div { height: 100%; width: 0; background: var(--gold); transition: width .2s linear; }
-  #exportCanvas { max-width: 60%; max-height: 50vh; border-radius: 14px; background: #111; }
+  .overlay #exportSrc { flex: none; width: auto; max-width: 62%; max-height: 48vh; border-radius: 14px; background: #111; }
   #exportStatus { font: italic 400 20px var(--serif); }
   .note { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; }
 </style>
@@ -164,7 +200,6 @@
     <button id="tipClose" aria-label="Dismiss">×</button>
   </div>
   <div id="camMsg" class="cam-msg hidden"><div><div id="camMsgText"></div><button id="camRetry">Turn on camera</button></div></div>
-  <div id="toast" class="toast pill"></div>
   <div class="cam-controls">
     <div class="side">
       <button id="toCalendar" class="glass-btn" aria-label="Your days">
@@ -173,7 +208,7 @@
       </button>
       <span class="caps">Days</span>
     </div>
-    <button id="recBtn" class="rec-btn" aria-label="Record"><span class="ring"></span><span class="core"></span></button>
+    <button id="recBtn" class="rec-btn" aria-label="Record"><span class="ring"></span><img class="apple" src="apple.png" alt=""><span class="stop"></span></button>
     <div id="actWrap" class="side act">
       <button id="actBtn" class="glass-btn" aria-label="Activity">
         <svg id="icNew" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 13a7.5 7.5 0 1 1-8-7.48"/><path d="M18 2.8v6.4M14.8 6h6.4"/></svg>
@@ -192,13 +227,30 @@
 
 <!-- DAY -->
 <section id="day" class="screen">
-  <header><button id="dayBack" class="hdr-btn">‹ Days</button><h1 id="dayTitle"></h1></header>
+  <header class="day-hdr"><button id="dayBack" class="hdr-btn">‹ Days</button><h1 id="dayTitle"></h1>
+    <button id="selectBtn" class="hdr-icon" aria-label="Select clips"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.4 12.3l2.4 2.4 4.8-5"/></svg></button>
+    <button id="selectCancel" class="hdr-btn hidden">Cancel</button></header>
   <div id="dayContent" class="scroll"></div>
-  <div class="day-actions">
+  <div id="selBar" class="day-actions sel-bar hidden">
+    <button id="delSelected" class="del-btn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.2a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.85 12.1a2 2 0 0 0 2 1.9h5.3a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"/></svg><span class="caps" id="delLabel">Delete</span></button>
+  </div>
+  <div id="dayActions" class="day-actions">
     <button id="dayRecord" class="btn">Record</button>
     <button id="exportBtn" class="btn primary">Make video</button>
   </div>
 </section>
+
+<div id="toast" class="toast pill"></div>
+
+<!-- CONFIRM SHEET -->
+<div id="sheet" class="sheet-wrap hidden">
+  <div class="sheet">
+    <div id="sheetText" class="sheet-text"></div>
+    <div class="note" id="sheetSub">This can’t be undone.</div>
+    <button id="sheetOk" class="btn danger">Delete</button>
+    <button id="sheetCancel" class="btn">Cancel</button>
+  </div>
+</div>
 
 <!-- CLIP PLAYER -->
 <div id="player" class="overlay hidden">
@@ -211,7 +263,7 @@
 <div id="exportOv" class="overlay hidden">
   <div class="ov-top"><span class="note" id="exportTitle">Making your film</span><button id="exportClose" class="hdr-btn">Cancel</button></div>
   <div id="exportWorking" class="export-body">
-    <canvas id="exportCanvas"></canvas>
+    <video id="exportSrc" playsinline></video>
     <div class="progress"><div id="exportBar"></div></div>
     <div id="exportStatus">Starting…</div>
     <div class="note">Keep the app open until it's done.</div>
@@ -221,8 +273,7 @@
 </div>
 
 <!-- hidden helpers: recording canvas + export player -->
-<canvas id="recCanvas" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px"></canvas>
-<video id="exportSrc" playsinline style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px"></video>
+<canvas id="exportCanvas" style="position:fixed;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;top:0"></canvas>
 
 <script>
 (() => {
@@ -302,10 +353,11 @@ function show(name) {
 }
 
 /* ================= Camera + recording ================= */
-// The camera feed is drawn onto a canvas and the canvas is recorded.
-// That way the camera can be switched front <-> back mid-recording and it all stays one clip.
-const preview = $('preview'), recBtn = $('recBtn'), recCanvas = $('recCanvas'), rcx = recCanvas.getContext('2d');
-let stream = null, facing = 'user', recorder = null, chunks = [], recStart = 0, recThumb = '', timerInt = null, starting = null, flipping = false, recRaf = 0;
+// Clips are recorded straight from the camera (smoothest, highest quality).
+// Flipping mid-recording ends one segment and starts the next; segments of one
+// recording share a takeId, show as one clip, and play back-to-back.
+const preview = $('preview'), recBtn = $('recBtn');
+let stream = null, facing = 'user', recorder = null, take = null, timerInt = null, starting = null, flipping = false;
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
@@ -315,14 +367,24 @@ function pickMime(cands) {
   return cands.find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 const CLIP_MIMES = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-const videoConstraints = () => ({ facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } });
 const AUDIO = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 };
+// Ask for a steady 30fps (min 24 keeps the phone from dropping frames in dim light); fall back if refused.
+const videoConstraints = strict => ({ facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 },
+  frameRate: strict ? { ideal: 30, min: 24 } : { ideal: 30 } });
+async function openCam(withAudio) {
+  const audio = withAudio ? AUDIO : false;
+  try { return await navigator.mediaDevices.getUserMedia({ video: videoConstraints(true), audio }); }
+  catch (e) {
+    if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
+    return navigator.mediaDevices.getUserMedia({ video: videoConstraints(false), audio });
+  }
+}
 
 function camMsg(text) {
   $('camMsgText').textContent = text;
   $('camMsg').classList.toggle('hidden', !text);
 }
-function isRecording() { return !!(recorder && recorder.state === 'recording'); }
+function isRecording() { return !!take; }
 
 async function attachPreview() {
   preview.srcObject = stream;
@@ -338,7 +400,7 @@ async function startCamera() {
   }
   starting = (async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: AUDIO });
+      const s = await openCam(true);
       if (screen !== 'camera' || document.hidden) { s.getTracks().forEach(t => t.stop()); return; }
       stream = s;
       await attachPreview();
@@ -357,7 +419,80 @@ function stopCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; preview.srcObject = null; }
 }
 
-// Swap only the video track; the microphone (and any recording) keeps running.
+function grabThumb() {
+  const w = preview.videoWidth, h = preview.videoHeight;
+  if (!w || !h) return '';
+  const c = document.createElement('canvas');
+  const scale = 240 / Math.max(w, h);
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  c.getContext('2d').drawImage(preview, 0, 0, c.width, c.height);
+  try { return c.toDataURL('image/jpeg', 0.75); } catch { return ''; }
+}
+
+function startSegment() {
+  const t = take;
+  const mime = pickMime(CLIP_MIMES);
+  let r;
+  try { r = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 10_000_000, audioBitsPerSecond: 192_000 } : undefined); }
+  catch (e) { r = new MediaRecorder(stream); }
+  const segChunks = [], segStart = Date.now(), part = t.parts++;
+  const thumb = grabThumb() || t.thumb;
+  if (!t.thumb) t.thumb = thumb;
+  r.ondataavailable = e => { if (e.data && e.data.size) segChunks.push(e.data); };
+  r.stopped = new Promise(resolve => {
+    r.onstop = async () => {
+      const duration = (Date.now() - segStart) / 1000;
+      const type = (r.mimeType || mime || 'video/mp4').split(';')[0];
+      const blob = new Blob(segChunks, { type });
+      if (blob.size > 2000 && duration >= 0.3) {
+        if (session.date !== t.date) await newSession(); // crossed midnight while open
+        const meta = { id: uid(), date: t.date, activityId: sessionActivityId(), takeId: t.id, part,
+                       createdAt: segStart, duration, type, size: blob.size, thumb: t.thumb || thumb };
+        session.clipIds.push(meta.id);
+        try { await saveClip(meta, blob); t.saved++; }
+        catch (e) { console.error(e); t.failed = true; }
+      }
+      resolve();
+    };
+  });
+  t.pending.push(r.stopped);
+  r.start(1000);
+  recorder = r;
+}
+
+function startRecording() {
+  if (!stream || flipping) { if (!stream) startCamera(); return; }
+  take = { id: uid(), date: dateKey(), start: Date.now(), parts: 0, saved: 0, pending: [], thumb: '' };
+  startSegment();
+  recBtn.classList.add('recording');
+  $('recTimer').classList.remove('hidden');
+  $('dateLabel').classList.add('hidden');
+  $('recTimer').textContent = '0:00';
+  const t0 = take.start;
+  timerInt = setInterval(() => { $('recTimer').textContent = fmtDur((Date.now() - t0) / 1000); }, 250);
+}
+async function stopRecording() {
+  if (!take) return;
+  const t = take;
+  clearInterval(timerInt);
+  recBtn.classList.remove('recording');
+  $('recTimer').classList.add('hidden');
+  $('dateLabel').classList.remove('hidden');
+  if (recorder && recorder.state === 'recording') recorder.stop();
+  recorder = null;
+  take = null;
+  await Promise.all(t.pending);
+  if (t.failed) toast('Couldn’t save clip');
+  else if (t.saved) {
+    if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+    const n = takeCount(await clipsFor(dateKey()));
+    toast(`Saved · ${n} clip${n === 1 ? '' : 's'} today`);
+  }
+  updateBadge();
+}
+function takeCount(clips) { return new Set(clips.map(c => c.takeId || c.id)).size; }
+
+// Swap the camera. If recording, the current segment ends and a new one starts right after.
 async function flipCamera() {
   if (flipping) return;
   flipping = true;
@@ -367,21 +502,19 @@ async function flipCamera() {
   $('flipBtn').classList.toggle('spin');
   try {
     if (!stream) { await startCamera(); return; }
+    if (take && recorder && recorder.state === 'recording') { recorder.stop(); recorder = null; }
     const audio = stream.getAudioTracks();
     stream.getVideoTracks().forEach(t => t.stop());
-    const vs = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: false });
+    let vs;
+    try { vs = await openCam(false); }
+    catch (e) { facing = prev; vs = await openCam(false); toast('Couldn’t switch camera'); }
     stream = new MediaStream([...vs.getVideoTracks(), ...audio]);
     await attachPreview();
-    await new Promise(r => setTimeout(r, 120));
+    if (preview.readyState < 2) await new Promise(r => { preview.onloadeddata = r; setTimeout(r, 400); });
+    if (take) startSegment();
   } catch (e) {
     console.warn(e);
-    facing = prev;
-    try {
-      const vs = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: false });
-      stream = new MediaStream([...vs.getVideoTracks(), ...(stream ? stream.getAudioTracks() : [])]);
-      await attachPreview();
-    } catch {}
-    toast('Couldn’t switch camera');
+    camMsg('Couldn’t switch camera. ' + (e && e.message ? e.message : ''));
   } finally {
     preview.classList.remove('flipping');
     flipping = false;
@@ -396,97 +529,33 @@ function drawCover(ctx, v, W, H) {
   ctx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
 }
 
-function grabThumb() {
-  const w = preview.videoWidth, h = preview.videoHeight;
-  if (!w || !h) return '';
-  const c = document.createElement('canvas');
-  const scale = 240 / Math.max(w, h);
-  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
-  c.getContext('2d').drawImage(preview, 0, 0, c.width, c.height);
-  try { return c.toDataURL('image/jpeg', 0.75); } catch { return ''; }
-}
-
-function startRecording() {
-  if (!stream || flipping) { if (!stream) startCamera(); return; }
-  // Frame size is fixed from the camera at the moment recording starts (max 1920 on the long side).
-  let W = preview.videoWidth || 1080, H = preview.videoHeight || 1920;
-  const k = Math.min(1, 1920 / Math.max(W, H));
-  W = Math.round(W * k / 2) * 2; H = Math.round(H * k / 2) * 2;
-  recCanvas.width = W; recCanvas.height = H;
-  rcx.imageSmoothingEnabled = true; rcx.imageSmoothingQuality = 'high';
-  rcx.fillStyle = '#000'; rcx.fillRect(0, 0, W, H);
-  drawCover(rcx, preview, W, H);
-  const loop = () => {
-    if (!flipping && preview.readyState >= 2) drawCover(rcx, preview, W, H);
-    recRaf = requestAnimationFrame(loop);
-  };
-  loop();
-  const canvasStream = recCanvas.captureStream(30);
-  const recStream = new MediaStream([...canvasStream.getVideoTracks(), ...stream.getAudioTracks()]);
-
-  const mime = pickMime(CLIP_MIMES);
-  try {
-    recorder = new MediaRecorder(recStream, mime ? { mimeType: mime, videoBitsPerSecond: 10_000_000, audioBitsPerSecond: 192_000 } : undefined);
-  } catch (e) { recorder = new MediaRecorder(recStream); }
-  chunks = [];
-  recThumb = grabThumb();
-  recStart = Date.now();
-  const recDate = dateKey(new Date(recStart)); // a clip belongs to the day it was started
-  recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  const r = recorder;
-  r.stopped = new Promise(resolve => {
-    r.onstop = async () => {
-      cancelAnimationFrame(recRaf);
-      canvasStream.getTracks().forEach(t => t.stop());
-      const duration = (Date.now() - recStart) / 1000;
-      const type = (r.mimeType || mime || 'video/mp4').split(';')[0];
-      const blob = new Blob(chunks, { type });
-      chunks = [];
-      if (blob.size > 2000 && duration >= 0.3) {
-        if (session.date !== recDate) await newSession(); // crossed midnight while open
-        const meta = { id: uid(), date: recDate, activityId: sessionActivityId(), createdAt: recStart, duration, type, size: blob.size, thumb: recThumb };
-        session.clipIds.push(meta.id);
-        try {
-          await saveClip(meta, blob);
-          if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
-          const n = (await clipsFor(dateKey())).length;
-          toast(`Saved · ${n} clip${n === 1 ? '' : 's'} today`);
-          updateBadge();
-        } catch (e) { console.error(e); toast('Couldn’t save clip'); }
-      }
-      resolve();
-    };
-  });
-  recorder.start(1000);
-  recBtn.classList.add('recording');
-  $('recTimer').classList.remove('hidden');
-  $('dateLabel').classList.add('hidden');
-  $('recTimer').textContent = '0:00';
-  timerInt = setInterval(() => { $('recTimer').textContent = fmtDur((Date.now() - recStart) / 1000); }, 250);
-}
-function stopRecording() {
-  if (!isRecording()) return Promise.resolve();
-  const r = recorder;
-  clearInterval(timerInt);
-  recBtn.classList.remove('recording');
-  $('recTimer').classList.add('hidden');
-  $('dateLabel').classList.remove('hidden');
-  r.stop();
-  return r.stopped.finally(() => { if (recorder === r) recorder = null; });
-}
-
-recBtn.addEventListener('click', () => { if (isRecording()) stopRecording(); else startRecording(); });
+recBtn.addEventListener('click', () => { if (flipping) return; if (isRecording()) stopRecording(); else startRecording(); });
 $('flipBtn').addEventListener('click', flipCamera);
 
 // Double-tap anywhere on the camera view flips the camera (works while recording too).
 let lastTap = 0, lastTapX = 0, lastTapY = 0;
-$('camera').addEventListener('pointerup', e => {
-  if (e.target.closest('button, .install-tip, .cam-msg, .cam-controls')) return;
+const isBg = el => !el.closest('button, .install-tip, .cam-msg, .cam-controls');
+function registerTap(x, y) {
   const now = Date.now();
-  if (now - lastTap < 320 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 40) { lastTap = 0; flipCamera(); }
-  else { lastTap = now; lastTapX = e.clientX; lastTapY = e.clientY; }
+  const dbl = now - lastTap < 300 && Math.hypot(x - lastTapX, y - lastTapY) < 50;
+  if (dbl) { lastTap = 0; flipCamera(); } else { lastTap = now; lastTapX = x; lastTapY = y; }
+  return dbl;
+}
+// Touch (iPhone): handle on touchend and cancel the browser's own double-tap action (zoom).
+$('camera').addEventListener('touchend', e => {
+  if (!isBg(e.target) || e.changedTouches.length !== 1 || e.touches.length) return;
+  const t = e.changedTouches[0];
+  e.preventDefault();
+  registerTap(t.clientX, t.clientY);
+}, { passive: false });
+// Mouse (computers)
+$('camera').addEventListener('pointerup', e => {
+  if (e.pointerType === 'touch' || !isBg(e.target)) return;
+  registerTap(e.clientX, e.clientY);
 });
 $('camera').addEventListener('dblclick', e => e.preventDefault());
+// Block pinch-zoom gestures in the home-screen app.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
 $('camRetry').addEventListener('click', () => { stopCamera(); startCamera(); });
 $('toCalendar').addEventListener('click', async () => { await stopRecording(); openCalendar(); });
 
@@ -543,7 +612,7 @@ function toast(msg) {
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800);
 }
 async function updateBadge() {
-  const n = (await clipsFor(dateKey())).length;
+  const n = takeCount(await clipsFor(dateKey()));
   $('todayBadge').textContent = n;
   $('todayBadge').classList.toggle('hidden', !n);
 }
@@ -622,15 +691,21 @@ function groupActivities(clips) {
   return [...map.values()];
 }
 
+function groupTakes(clips) {
+  const map = new Map();
+  for (const c of clips) { const t = c.takeId || c.id; if (!map.has(t)) map.set(t, []); map.get(t).push(c); }
+  return [...map.values()].map(p => p.sort((a, b) => a.createdAt - b.createdAt));
+}
 async function openDay(k) {
   show('day');
+  selecting = false; selected.clear();
   currentDay = k;
   releaseUrls();
   const d = keyToDate(k);
   const isToday = k === dateKey();
   $('dayTitle').textContent = isToday ? 'Today' : fmtShort(d);
   $('dayRecord').classList.toggle('hidden', !isToday);
-  dayClips = groupActivities(await clipsFor(k)).flat();
+  dayClips = groupActivities(await clipsFor(k)).flatMap(g => groupTakes(g).flat());
   // Prepare playable URLs up front so "Make video" can start instantly on tap (iOS needs that).
   for (const c of dayClips) {
     const b = await blobFor(c.id);
@@ -638,10 +713,21 @@ async function openDay(k) {
   }
   renderDay();
 }
+let selecting = false, selected = new Set(), openTile = null;
+const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.2a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.85 12.1a2 2 0 0 0 2 1.9h5.3a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"/></svg>';
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-8.5"/></svg>';
+
 function renderDay() {
   const box = $('dayContent');
   box.innerHTML = '';
+  openTile = null;
+  box.classList.toggle('selecting', selecting);
   $('exportBtn').disabled = !dayClips.length;
+  $('selectBtn').classList.toggle('hidden', selecting || !dayClips.length);
+  $('selectCancel').classList.toggle('hidden', !selecting);
+  $('selBar').classList.toggle('hidden', !selecting);
+  $('dayActions').classList.toggle('hidden', selecting);
+  updateSelLabel();
   if (!dayClips.length) {
     box.innerHTML = `<div class="empty-msg">${currentDay === dateKey() ? 'No clips yet today.<br>Tap Record to capture your first moment.' : 'Nothing was recorded this day.'}</div>`;
     return;
@@ -650,7 +736,8 @@ function renderDay() {
   const head = document.createElement('div');
   head.className = 'activity';
   head.innerHTML = `<div class="note"></div>`;
-  head.firstChild.textContent = `${fmtLong(keyToDate(currentDay))} · ${dayClips.length} clip${dayClips.length === 1 ? '' : 's'} · ${fmtDur(total)}`;
+  const nTakes = takeCount(dayClips);
+  head.firstChild.textContent = `${fmtLong(keyToDate(currentDay))} · ${nTakes} clip${nTakes === 1 ? '' : 's'} · ${fmtDur(total)}`;
   box.appendChild(head);
   groupActivities(dayClips).forEach((g, i) => {
     const sec = document.createElement('div');
@@ -658,40 +745,113 @@ function renderDay() {
     sec.innerHTML = `<h2></h2><div class="grid"></div>`;
     sec.querySelector('h2').textContent = `Activity ${i + 1} · ${fmtTime(g[0].createdAt)}`;
     const grid = sec.querySelector('.grid');
-    for (const c of g) {
-      const el = document.createElement('button');
-      el.className = 'clip';
-      el.innerHTML = `${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}<span class="dur">${fmtDur(c.duration)}</span>`;
-      el.addEventListener('click', () => openPlayer(c));
+    for (const parts of groupTakes(g)) {
+      const c = parts[0], key = c.takeId || c.id, dur = parts.reduce((s, p) => s + p.duration, 0);
+      const el = document.createElement('div');
+      el.className = 'clip' + (selected.has(key) ? ' selected' : '');
+      el.innerHTML = `${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}<span class="dur">${fmtDur(dur)}</span>
+        <span class="sel-mark">${CHECK_SVG}</span>
+        <div class="clip-ov"><button class="view-btn">View Clip</button><button class="trash-btn" aria-label="Delete clip">${TRASH_SVG}</button></div>`;
+      el.addEventListener('click', e => {
+        if (selecting) {
+          if (selected.has(key)) selected.delete(key); else selected.add(key);
+          el.classList.toggle('selected', selected.has(key));
+          updateSelLabel();
+          return;
+        }
+        if (e.target.closest('.view-btn')) { closeTile(); openPlayer(parts); return; }
+        if (e.target.closest('.trash-btn')) { closeTile(); askDelete([parts]); return; }
+        if (openTile === el) { closeTile(); return; }
+        closeTile();
+        el.classList.add('open'); openTile = el;
+      });
       grid.appendChild(el);
     }
     box.appendChild(sec);
   });
 }
+function closeTile() { if (openTile) openTile.classList.remove('open'); openTile = null; }
+document.addEventListener('click', e => { if (openTile && !openTile.contains(e.target)) closeTile(); }, true);
+$('dayContent').addEventListener('scroll', closeTile, { passive: true });
+
+function updateSelLabel() {
+  const n = selected.size;
+  $('delLabel').textContent = n ? `Delete ${n}` : 'Delete';
+  $('delSelected').disabled = !n;
+  if (selecting) $('dayTitle').textContent = n ? `${n} selected` : 'Select clips';
+}
+function setSelecting(on) {
+  selecting = on; selected.clear(); closeTile();
+  if (!on) $('dayTitle').textContent = currentDay === dateKey() ? 'Today' : fmtShort(keyToDate(currentDay));
+  renderDay();
+}
+$('selectBtn').addEventListener('click', () => setSelecting(true));
+$('selectCancel').addEventListener('click', () => setSelecting(false));
+$('delSelected').addEventListener('click', () => {
+  const takes = groupTakes(dayClips).filter(p => selected.has(p[0].takeId || p[0].id));
+  if (takes.length) askDelete(takes, () => setSelecting(false));
+});
+
+// Small confirmation sheet
+function confirmSheet(text) {
+  return new Promise(res => {
+    $('sheetText').textContent = text;
+    $('sheet').classList.remove('hidden');
+    const done = v => { $('sheet').classList.add('hidden'); $('sheetOk').onclick = $('sheetCancel').onclick = $('sheet').onclick = null; res(v); };
+    $('sheetOk').onclick = e => { e.stopPropagation(); done(true); };
+    $('sheetCancel').onclick = e => { e.stopPropagation(); done(false); };
+    $('sheet').onclick = e => { if (e.target === $('sheet')) done(false); };
+  });
+}
+async function askDelete(takes, after) {
+  const n = takes.length;
+  if (!await confirmSheet(n === 1 ? 'Delete this clip?' : `Delete ${n} clips?`)) return;
+  const ids = takes.flat().map(p => p.id);
+  for (const id of ids) {
+    await deleteClip(id);
+    const u = dayUrls.get(id); if (u) { URL.revokeObjectURL(u); dayUrls.delete(id); }
+  }
+  dayClips = dayClips.filter(c => !ids.includes(c.id));
+  toast(n === 1 ? 'Clip deleted' : `${n} clips deleted`);
+  if (after) after(); else renderDay();
+  updateBadge();
+}
 $('dayBack').addEventListener('click', () => { releaseUrls(); openCalendar(); });
 $('dayRecord').addEventListener('click', () => { releaseUrls(); show('camera'); });
 
 /* ================= Clip player ================= */
-let playing = null;
-function openPlayer(c) {
-  playing = c;
+let playing = null, playIdx = 0;
+function openPlayer(parts) {
+  playing = parts; playIdx = 0;
   const v = $('playerVideo');
-  v.src = dayUrls.get(c.id) || '';
-  $('playerInfo').textContent = `${fmtTime(c.createdAt)} · ${fmtDur(c.duration)}`;
+  const dur = parts.reduce((s, p) => s + p.duration, 0);
+  $('playerInfo').textContent = `${fmtTime(parts[0].createdAt)} · ${fmtDur(dur)}`;
   $('player').classList.remove('hidden');
+  v.src = dayUrls.get(parts[0].id) || '';
   v.play().catch(() => {});
 }
+$('playerVideo').addEventListener('ended', () => {
+  if (!playing || playIdx >= playing.length - 1) return;
+  const v = $('playerVideo');
+  v.src = dayUrls.get(playing[++playIdx].id) || '';
+  v.play().catch(() => {});
+});
 function closePlayer() { const v = $('playerVideo'); v.pause(); v.removeAttribute('src'); v.load(); $('player').classList.add('hidden'); playing = null; }
 $('playerClose').addEventListener('click', closePlayer);
 $('playerDelete').addEventListener('click', async () => {
-  if (!playing || !confirm('Delete this clip? This can’t be undone.')) return;
-  const id = playing.id;
+  if (!playing) return;
+  const parts = playing;
+  $('playerVideo').pause();
+  if (!await confirmSheet('Delete this clip?')) return;
   closePlayer();
-  await deleteClip(id);
-  const u = dayUrls.get(id); if (u) { URL.revokeObjectURL(u); dayUrls.delete(id); }
-  dayClips = dayClips.filter(c => c.id !== id);
-  renderDay(); updateBadge();
+  await askDeleteNow([parts]);
 });
+async function askDeleteNow(takes) {
+  const ids = takes.flat().map(p => p.id);
+  for (const id of ids) { await deleteClip(id); const u = dayUrls.get(id); if (u) { URL.revokeObjectURL(u); dayUrls.delete(id); } }
+  dayClips = dayClips.filter(c => !ids.includes(c.id));
+  toast('Clip deleted'); renderDay(); updateBadge();
+}
 
 /* ================= Export (stitch clips into one video) ================= */
 // Plays each clip in order onto a canvas and records the canvas + audio.
@@ -742,7 +902,7 @@ async function runExport(clips, primed) {
   $('exportStatus').textContent = 'Getting ready…';
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
 
-  let raf = 0, rec = null;
+  let raf = 0, rec = null, running = false;
   try {
     await primed;
     if (srcV.readyState < 1) await waitEvent(srcV, 'loadedmetadata');
@@ -757,14 +917,28 @@ async function runExport(clips, primed) {
     const totalDur = clips.reduce((s, c) => s + c.duration, 0);
     let doneDur = 0;
 
-    const draw = () => {
-      if (srcV.readyState >= 2) drawCover(cx, srcV, W, H);
+    // Draw each decoded frame exactly once (requestVideoFrameCallback) and push it out
+    // with requestFrame() when available, instead of sampling on a timer (which stutters).
+    let vStream = canvas.captureStream(0);
+    let vTrack = vStream.getVideoTracks()[0];
+    const manual = !!(vTrack && typeof vTrack.requestFrame === 'function');
+    if (!manual) { vStream.getTracks().forEach(t => t.stop()); vStream = canvas.captureStream(30); vTrack = vStream.getVideoTracks()[0]; }
+    const useRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+    running = true; let armed = false;
+    const paint = () => {
+      if (srcV.readyState >= 2) { drawCover(cx, srcV, W, H); if (manual) vTrack.requestFrame(); }
+    };
+    const onFrame = () => { armed = false; if (!running) return; paint(); arm(); };
+    const arm = () => { if (useRVFC && running && !armed) { armed = true; srcV.requestVideoFrameCallback(onFrame); } };
+    const tick = () => {
+      if (!running) return;
+      if (!useRVFC) paint();
       const p = Math.min(1, (doneDur + (srcV.currentTime || 0)) / (totalDur || 1));
       $('exportBar').style.width = (p * 100).toFixed(1) + '%';
-      raf = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(tick);
     };
+    const draw = () => { tick(); arm(); };
 
-    const vStream = canvas.captureStream(30);
     const tracks = [...vStream.getVideoTracks(), ...audioDest.stream.getAudioTracks()];
     const outStream = new MediaStream(tracks);
     const mime = pickMime(['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']);
@@ -783,10 +957,12 @@ async function runExport(clips, primed) {
       if (state.cancelled || state.backgrounded) throw new Error('stopped');
       const ended = waitEvent(srcV, 'ended');
       await srcV.play();
+      arm();
       await Promise.race([ended, new Promise((_, rej) => state.reject = rej)]);
       doneDur += clips[i].duration;
     }
     await new Promise(r => setTimeout(r, 150));
+    running = false;
     cancelAnimationFrame(raf);
     rec.stop();
     await recStopped;
@@ -806,6 +982,7 @@ async function runExport(clips, primed) {
     $('exportClose').textContent = 'Done';
     $('exportTitle').textContent = `${fmtShort(keyToDate(clips[0].date))} · ${fmtDur(totalDur)}`;
   } catch (e) {
+    running = false;
     cancelAnimationFrame(raf);
     try { if (rec && rec.state !== 'inactive') rec.stop(); } catch {}
     srcV.pause();
@@ -867,6 +1044,16 @@ window.addEventListener('pagehide', () => { stopRecording(); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// Home-screen app: size every screen to the real display height (avoids gaps on some iPhones).
+function fitScreen() {
+  const portrait = innerHeight >= innerWidth;
+  const h = standalone && portrait ? Math.max(innerHeight, screen.height) : innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+fitScreen();
+addEventListener('resize', fitScreen);
+addEventListener('orientationchange', () => setTimeout(fitScreen, 300));
 
 updateDateLabel();
 updateBadge();

@@ -1,7 +1,7 @@
 // Cache the app shell so it opens instantly, even offline.
 // Stale-while-revalidate: serve cached copy, refresh it in the background.
-const CACHE = 'ditl-v4';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
+const CACHE = 'ditl-v7';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png', './apple.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
