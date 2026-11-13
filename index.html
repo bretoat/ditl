@@ -27,7 +27,7 @@
     overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   .hidden { display: none !important; }
-  .screen { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); display: none; flex-direction: column; overflow: hidden; }
+  .screen { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); min-height: 100%; display: none; flex-direction: column; overflow: hidden; }
   .screen.active { display: flex; }
   .caps { text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; }
 
@@ -171,7 +171,7 @@
   .sheet .note { margin-bottom: 8px; }
 
   /* ---------- Overlays ---------- */
-  .overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); background: #000; z-index: 10; display: flex; flex-direction: column; }
+  .overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); min-height: 100%; background: #000; z-index: 10; display: flex; flex-direction: column; }
   .overlay video { flex: 1; width: 100%; min-height: 0; object-fit: contain; background: #000; }
   .ov-bar { display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px); }
   .ov-top { padding: calc(var(--st) + 14px) 20px 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -276,6 +276,12 @@
 <canvas id="exportCanvas" style="position:fixed;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;top:0"></canvas>
 
 <script>
+window.addEventListener('error', e => {
+  const d = document.getElementById('errBox') || Object.assign(document.createElement('div'), { id: 'errBox' });
+  d.style.cssText = 'position:fixed;left:12px;right:12px;top:60px;z-index:99;background:#3a0d0b;color:#fff;font:13px/1.4 -apple-system,sans-serif;padding:12px;border-radius:12px';
+  d.textContent = 'DITL error: ' + (e.message || e.error) + ' (line ' + e.lineno + ')';
+  document.body.appendChild(d);
+});
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -1047,13 +1053,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 
 // Home-screen app: size every screen to the real display height (avoids gaps on some iPhones).
 function fitScreen() {
-  const portrait = innerHeight >= innerWidth;
-  const h = standalone && portrait ? Math.max(innerHeight, screen.height) : innerHeight;
+  const ih = window.innerHeight || 0;
+  let h = ih;
+  if (standalone && matchMedia('(orientation: portrait)').matches) h = Math.max(ih, screen.height || 0);
+  // Never trust a tiny/zero reading (iPhones can report 0 for a moment at launch).
+  if (h < 300) { document.documentElement.style.removeProperty('--app-h'); return; }
   document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 fitScreen();
-addEventListener('resize', fitScreen);
+['resize', 'pageshow', 'load'].forEach(ev => addEventListener(ev, fitScreen));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) fitScreen(); });
 addEventListener('orientationchange', () => setTimeout(fitScreen, 300));
+setTimeout(fitScreen, 300); setTimeout(fitScreen, 1200);
 
 updateDateLabel();
 updateBadge();
