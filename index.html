@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DITL">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>DITL</title>
+<style>
+  :root {
+    --red: #ff3b30; --bg: #000; --panel: #141416; --row: #1c1c1f; --line: #2a2a2e;
+    --text: #f5f5f7; --dim: #8e8e93; --faint: #48484a;
+    --st: env(safe-area-inset-top); --sb: env(safe-area-inset-bottom);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 16px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .hidden { display: none !important; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ---------- Camera ---------- */
+  #camera { background: #000; }
+  #preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+  #preview.mirror { transform: scaleX(-1); }
+  .cam-top { position: absolute; top: 0; left: 0; right: 0; padding: calc(var(--st) + 14px) 16px 12px;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    background: linear-gradient(rgba(0,0,0,.45), transparent); pointer-events: none; }
+  .pill { background: rgba(0,0,0,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+  #recTimer { background: var(--red); font-variant-numeric: tabular-nums; }
+  .cam-controls { position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 24px 28px calc(var(--sb) + 28px); display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(transparent, rgba(0,0,0,.5)); }
+  .icon-btn { width: 52px; height: 52px; border-radius: 50%; background: rgba(0,0,0,.4);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: grid; place-items: center; position: relative; }
+  .icon-btn svg { width: 26px; height: 26px; }
+  .flip { position: absolute; right: 16px; top: calc(var(--st) + 6px); pointer-events: auto; width: 44px; height: 44px; }
+  .flip svg { width: 22px; height: 22px; }
+  .act-btn { width: 64px; height: 64px; border-radius: 18px; background: rgba(0,0,0,.4);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; border: 2px solid transparent; }
+  .act-btn .act-ic { font-size: 22px; line-height: 1; font-weight: 400; }
+  .act-btn.same { border-color: #fff; background: rgba(255,255,255,.18); }
+  .act-btn.off { visibility: hidden; }
+  .badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 6px;
+    border-radius: 10px; background: var(--red); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .rec-btn { width: 80px; height: 80px; border-radius: 50%; border: 5px solid #fff; display: grid; place-items: center; }
+  .rec-btn span { width: 62px; height: 62px; border-radius: 50%; background: var(--red);
+    transition: all .18s ease; }
+  .rec-btn.recording span { width: 30px; height: 30px; border-radius: 7px; }
+  .rec-btn:active span { transform: scale(.92); }
+  .cam-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 32px; text-align: center; }
+  .cam-msg div { max-width: 300px; }
+  .cam-msg button { margin-top: 16px; background: #fff; color: #000; padding: 10px 18px; border-radius: 999px; font-weight: 600; }
+  .toast { position: absolute; left: 50%; bottom: calc(var(--sb) + 140px); transform: translate(-50%, 10px);
+    opacity: 0; transition: all .25s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .install-tip { position: absolute; top: calc(var(--st) + 56px); left: 16px; right: 16px;
+    background: rgba(28,28,31,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 14px; padding: 12px 40px 12px 14px; font-size: 14px; color: #ddd; }
+  .install-tip b { color: #fff; }
+  .install-tip button { position: absolute; top: 8px; right: 10px; font-size: 20px; color: var(--dim); }
+
+  /* ---------- Lists ---------- */
+  header { padding: calc(var(--st) + 10px) 16px 10px; display: flex; align-items: center; gap: 12px;
+    background: rgba(0,0,0,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  header h1 { margin: 0; font-size: 20px; flex: 1; }
+  .hdr-btn { color: var(--red); font-weight: 600; font-size: 16px; padding: 6px 2px; }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--sb) + 24px); }
+  .day-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+  .day-row .num { width: 46px; text-align: center; flex-shrink: 0; }
+  .day-row .num small { display: block; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
+  .day-row .num strong { font-size: 24px; font-weight: 700; }
+  .day-row .info { flex: 1; min-width: 0; }
+  .day-row .info .t { font-weight: 600; }
+  .day-row .info .s { color: var(--dim); font-size: 14px; }
+  .day-row .thumbs { display: flex; }
+  .day-row .thumbs img { width: 34px; height: 46px; object-fit: cover; border-radius: 6px; border: 2px solid var(--bg); margin-left: -10px; background: var(--row); }
+  .day-row.today { background: #1a0b0a; }
+  .day-row.today .num strong { color: var(--red); }
+  .day-row.locked { opacity: .35; pointer-events: none; }
+  .day-row.empty .info .s { color: var(--faint); }
+  .lock svg { width: 18px; height: 18px; color: var(--dim); }
+  .storage { text-align: center; color: var(--faint); font-size: 13px; padding: 18px; }
+
+  .activity { padding: 16px 16px 4px; }
+  .activity h2 { font-size: 15px; margin: 0 0 10px; color: var(--dim); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .clip { position: relative; aspect-ratio: 9/16; border-radius: 10px; overflow: hidden; background: var(--row); }
+  .clip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .clip .dur { position: absolute; right: 6px; bottom: 6px; font-size: 12px; font-weight: 700;
+    background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 6px; }
+  .empty-msg { color: var(--dim); text-align: center; padding: 60px 24px; }
+  .day-actions { flex-shrink: 0; display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px);
+    border-top: 1px solid var(--line); background: #000; }
+  .btn { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; text-align: center; background: var(--row); }
+  .btn.primary { background: var(--red); color: #fff; }
+  .btn:disabled { opacity: .35; }
+
+  /* ---------- Overlays ---------- */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.96); z-index: 10; display: flex; flex-direction: column; }
+  .overlay video { flex: 1; width: 100%; min-height: 0; object-fit: contain; background: #000; }
+  .ov-bar { display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px); }
+  .ov-top { padding: calc(var(--st) + 12px) 16px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .export-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 14px; }
+  .progress { width: 80%; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .progress div { height: 100%; width: 0; background: var(--red); transition: width .2s linear; }
+  #exportCanvas { max-width: 60%; max-height: 50vh; border-radius: 12px; background: #111; }
+  .note { color: var(--dim); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- CAMERA (home screen) -->
+<section id="camera" class="screen active">
+  <video id="preview" autoplay playsinline muted></video>
+  <div class="cam-top">
+    <div id="dateLabel" class="pill"></div>
+    <div id="recTimer" class="pill hidden">0:00</div>
+    <button id="flipBtn" class="icon-btn flip" aria-label="Flip camera">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3l-2-3H9L7 7H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z"/><path d="M9 13a3 3 0 0 1 5.2-2M15 13a3 3 0 0 1-5.2 2M14.5 9.5v1.7h-1.7M9.5 16.5v-1.7h1.7"/></svg>
+    </button>
+  </div>
+  <div id="installTip" class="install-tip hidden">
+    <b>Add DITL to your Home Screen</b> so your clips are kept: tap <b>Share</b> → <b>Add to Home Screen</b>, then open it from the icon.
+    <button id="tipClose" aria-label="Dismiss">×</button>
+  </div>
+  <div id="camMsg" class="cam-msg hidden"><div><div id="camMsgText"></div><button id="camRetry">Turn on camera</button></div></div>
+  <div id="toast" class="toast pill"></div>
+  <div class="cam-controls">
+    <button id="toCalendar" class="icon-btn" aria-label="Your days">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span id="todayBadge" class="badge hidden">0</span>
+    </button>
+    <button id="recBtn" class="rec-btn" aria-label="Record"><span></span></button>
+    <button id="actBtn" class="act-btn" aria-label="Activity">
+      <span class="act-ic" id="actIcon">+</span><span id="actLabel">New</span>
+    </button>
+  </div>
+</section>
+
+<!-- CALENDAR -->
+<section id="calendar" class="screen">
+  <header><h1>Your days</h1><button id="calToCam" class="hdr-btn">Camera</button></header>
+  <div id="dayList" class="scroll"></div>
+</section>
+
+<!-- DAY -->
+<section id="day" class="screen">
+  <header><button id="dayBack" class="hdr-btn">‹ Days</button><h1 id="dayTitle"></h1></header>
+  <div id="dayContent" class="scroll"></div>
+  <div class="day-actions">
+    <button id="dayRecord" class="btn">Record</button>
+    <button id="exportBtn" class="btn primary">Make video</button>
+  </div>
+</section>
+
+<!-- CLIP PLAYER -->
+<div id="player" class="overlay hidden">
+  <div class="ov-top"><span id="playerInfo" class="note"></span><button id="playerClose" class="hdr-btn">Done</button></div>
+  <video id="playerVideo" playsinline controls></video>
+  <div class="ov-bar"><button id="playerDelete" class="btn">Delete clip</button></div>
+</div>
+
+<!-- EXPORT -->
+<div id="exportOv" class="overlay hidden">
+  <div class="ov-top"><span class="note" id="exportTitle">Making your video</span><button id="exportClose" class="hdr-btn">Cancel</button></div>
+  <div id="exportWorking" class="export-body">
+    <canvas id="exportCanvas"></canvas>
+    <div class="progress"><div id="exportBar"></div></div>
+    <div id="exportStatus">Starting…</div>
+    <div class="note">Keep the app open until it's done.</div>
+  </div>
+  <video id="exportResult" class="hidden" playsinline controls></video>
+  <div id="exportDone" class="ov-bar hidden"><button id="saveBtn" class="btn primary">Save to Camera Roll</button></div>
+</div>
+
+<!-- hidden element used to play clips during export -->
+<video id="exportSrc" playsinline style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px"></video>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const FUTURE_DAYS = 7;
+const MIN_PAST_DAYS = 6;
+
+/* ================= Dates ================= */
+const pad = n => String(n).padStart(2, '0');
+const dateKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const keyToDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const fmtLong = d => d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+const fmtShort = d => d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtTime = t => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+const fmtDur = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${pad(s % 60)}`; };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+/* ================= Storage (IndexedDB) ================= */
+// "clips": small metadata + thumbnail.  "blobs": the actual video data.
+let dbPromise;
+function db() {
+  if (!dbPromise) dbPromise = new Promise((res, rej) => {
+    const r = indexedDB.open('ditl', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('clips', { keyPath: 'id' }).createIndex('date', 'date');
+      d.createObjectStore('blobs');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbPromise;
+}
+function req2p(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function saveClip(meta, blob) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction(['clips', 'blobs'], 'readwrite');
+    t.objectStore('clips').put(meta);
+    t.objectStore('blobs').put(blob, meta.id);
+    t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+async function deleteClip(id) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction(['clips', 'blobs'], 'readwrite');
+    t.objectStore('clips').delete(id);
+    t.objectStore('blobs').delete(id);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+async function updateMetas(metas) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction('clips', 'readwrite');
+    for (const m of metas) t.objectStore('clips').put(m);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+async function allClips() { const d = await db(); return req2p(d.transaction('clips').objectStore('clips').getAll()); }
+async function clipsFor(date) {
+  const d = await db();
+  const list = await req2p(d.transaction('clips').objectStore('clips').index('date').getAll(date));
+  return list.sort((a, b) => a.createdAt - b.createdAt);
+}
+async function blobFor(id) { const d = await db(); return req2p(d.transaction('blobs').objectStore('blobs').get(id)); }
+
+/* ================= Navigation ================= */
+let screen = 'camera';
+function show(name) {
+  screen = name;
+  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('active', s.id === name);
+  if (name === 'camera') startCamera(); else stopCamera();
+}
+
+/* ================= Camera + recording ================= */
+const preview = $('preview'), recBtn = $('recBtn');
+let stream = null, facing = 'user', recorder = null, chunks = [], recStart = 0, recThumb = '', timerInt = null, starting = null;
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+
+function pickMime(cands) {
+  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+  return cands.find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+const CLIP_MIMES = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+
+function camMsg(text) {
+  $('camMsgText').textContent = text;
+  $('camMsg').classList.toggle('hidden', !text);
+}
+
+async function startCamera() {
+  if (stream || starting) return starting;
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    camMsg('The camera only works when this app is opened from an https:// address.');
+    return;
+  }
+  starting = (async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
+      if (screen !== 'camera' || document.hidden) { s.getTracks().forEach(t => t.stop()); return; }
+      stream = s;
+      preview.srcObject = s;
+      preview.classList.toggle('mirror', facing === 'user');
+      await preview.play().catch(() => {});
+      camMsg('');
+    } catch (e) {
+      console.warn(e);
+      camMsg(e && e.name === 'NotAllowedError'
+        ? 'DITL needs your camera and microphone. Tap below, then choose Allow. (If nothing happens: Settings → Safari → Camera & Microphone → Allow.)'
+        : 'Couldn’t start the camera. ' + (e && e.message ? e.message : ''));
+    } finally { starting = null; }
+  })();
+  return starting;
+}
+function stopCamera() {
+  if (recorder && recorder.state === 'recording') return; // never kill an active recording here
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; preview.srcObject = null; }
+}
+
+function grabThumb() {
+  const w = preview.videoWidth, h = preview.videoHeight;
+  if (!w || !h) return '';
+  const c = document.createElement('canvas');
+  const scale = 240 / Math.max(w, h);
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  c.getContext('2d').drawImage(preview, 0, 0, c.width, c.height);
+  try { return c.toDataURL('image/jpeg', 0.7); } catch { return ''; }
+}
+
+function startRecording() {
+  if (!stream) { startCamera(); return; }
+  const mime = pickMime(CLIP_MIMES);
+  try {
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 3_000_000 } : undefined);
+  } catch (e) { recorder = new MediaRecorder(stream); }
+  chunks = [];
+  recThumb = grabThumb();
+  recStart = Date.now();
+  const recDate = dateKey(new Date(recStart)); // a clip belongs to the day it was started
+  recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const r = recorder;
+  r.stopped = new Promise(resolve => {
+    r.onstop = async () => {
+      const duration = (Date.now() - recStart) / 1000;
+      const type = (r.mimeType || mime || 'video/mp4').split(';')[0];
+      const blob = new Blob(chunks, { type });
+      chunks = [];
+      if (blob.size > 2000 && duration >= 0.3) {
+        if (session.date !== recDate) await newSession(); // crossed midnight while open
+        const meta = { id: uid(), date: recDate, activityId: sessionActivityId(), createdAt: recStart, duration, type, size: blob.size, thumb: recThumb };
+        session.clipIds.push(meta.id);
+        try {
+          await saveClip(meta, blob);
+          if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+          const n = (await clipsFor(dateKey())).length;
+          toast(`Saved · ${n} clip${n === 1 ? '' : 's'} today`);
+          updateBadge();
+        } catch (e) { console.error(e); toast('Couldn’t save clip (storage full?)'); }
+      }
+      resolve();
+    };
+  });
+  recorder.start(1000);
+  recBtn.classList.add('recording');
+  $('recTimer').classList.remove('hidden');
+  $('recTimer').textContent = '0:00';
+  timerInt = setInterval(() => { $('recTimer').textContent = fmtDur((Date.now() - recStart) / 1000); }, 250);
+}
+function stopRecording() {
+  if (!recorder || recorder.state !== 'recording') return Promise.resolve();
+  const r = recorder;
+  clearInterval(timerInt);
+  recBtn.classList.remove('recording');
+  $('recTimer').classList.add('hidden');
+  r.stop();
+  return r.stopped.finally(() => { if (recorder === r) recorder = null; });
+}
+
+recBtn.addEventListener('click', () => {
+  if (recorder && recorder.state === 'recording') stopRecording();
+  else startRecording();
+});
+$('flipBtn').addEventListener('click', async () => {
+  if (recorder && recorder.state === 'recording') return;
+  facing = facing === 'user' ? 'environment' : 'user';
+  stopCamera(); await startCamera();
+});
+$('camRetry').addEventListener('click', () => { stopCamera(); startCamera(); });
+$('toCalendar').addEventListener('click', async () => { await stopRecording(); openCalendar(); });
+
+/* ---- Activities ----
+   Every time the app is opened = a new activity by default.
+   All clips recorded during that opening share it.
+   The bottom-right button switches this opening to "same activity as last time". */
+const session = { date: '', newId: '', prevId: null, prevNum: 0, mode: 'new', clipIds: [] };
+
+async function todaysActivities() {
+  const clips = await clipsFor(dateKey());
+  const order = [];
+  for (const c of clips) { const a = c.activityId || c.id; if (!order.includes(a)) order.push(a); }
+  return { clips, order };
+}
+async function newSession() {
+  session.date = dateKey();
+  session.newId = uid();
+  session.mode = 'new';
+  session.clipIds = [];
+  const { clips, order } = await todaysActivities();
+  const last = clips[clips.length - 1];
+  session.prevId = last ? (last.activityId || last.id) : null;
+  session.prevNum = session.prevId ? order.indexOf(session.prevId) + 1 : 0;
+  session.newNum = order.length + 1;
+  renderActBtn();
+}
+function sessionActivityId() { return session.mode === 'same' && session.prevId ? session.prevId : session.newId; }
+function renderActBtn() {
+  const b = $('actBtn');
+  b.classList.toggle('off', !session.prevId);
+  b.classList.toggle('same', session.mode === 'same');
+  $('actIcon').textContent = session.mode === 'same' ? '\u21A9' : '+';
+  $('actLabel').textContent = session.mode === 'same' ? 'Same' : 'New';
+}
+$('actBtn').addEventListener('click', async () => {
+  if (!session.prevId) return;
+  session.mode = session.mode === 'same' ? 'new' : 'same';
+  renderActBtn();
+  // Move anything already recorded in this opening to the chosen activity.
+  if (session.clipIds.length) {
+    const clips = await clipsFor(session.date);
+    const mine = clips.filter(c => session.clipIds.includes(c.id));
+    mine.forEach(c => c.activityId = sessionActivityId());
+    await updateMetas(mine);
+  }
+  toast(session.mode === 'same' ? `Same activity as last time (Activity ${session.prevNum})` : `New activity (Activity ${session.newNum})`);
+});
+
+let toastT;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800);
+}
+async function updateBadge() {
+  const n = (await clipsFor(dateKey())).length;
+  $('todayBadge').textContent = n;
+  $('todayBadge').classList.toggle('hidden', !n);
+}
+function updateDateLabel() { $('dateLabel').textContent = fmtShort(new Date()); }
+
+// Install tip (iPhone in Safari, not opened from the home screen icon)
+if (isIOS && !standalone && !localStorage.getItem('tipDismissed')) $('installTip').classList.remove('hidden');
+$('tipClose').addEventListener('click', () => { $('installTip').classList.add('hidden'); localStorage.setItem('tipDismissed', '1'); });
+
+/* ================= Calendar ================= */
+async function openCalendar() {
+  show('calendar');
+  const clips = await allClips();
+  const byDate = {};
+  for (const c of clips) (byDate[c.date] ||= []).push(c);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayK = dateKey(today);
+  const dates = Object.keys(byDate).sort();
+  let earliest = addDays(today, -MIN_PAST_DAYS);
+  if (dates.length && keyToDate(dates[0]) < earliest) earliest = keyToDate(dates[0]);
+
+  const list = $('dayList');
+  list.innerHTML = '';
+  let todayRow;
+  for (let d = addDays(today, FUTURE_DAYS); d >= earliest; d = addDays(d, -1)) {
+    const k = dateKey(d);
+    const items = (byDate[k] || []).sort((a, b) => a.createdAt - b.createdAt);
+    const future = d > today, isToday = k === todayK;
+    const row = document.createElement('button');
+    row.className = 'day-row' + (future ? ' locked' : '') + (isToday ? ' today' : '') + (!items.length && !future ? ' empty' : '');
+    const total = items.reduce((s, c) => s + c.duration, 0);
+    const label = isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    const sub = future ? 'Locked' : items.length ? `${items.length} clip${items.length === 1 ? '' : 's'} · ${fmtDur(total)}` : 'Nothing recorded';
+    row.innerHTML = `
+      <div class="num"><small>${d.toLocaleDateString(undefined, { weekday: 'short' })}</small><strong>${d.getDate()}</strong></div>
+      <div class="info"><div class="t"></div><div class="s"></div></div>
+      ${future ? '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>'
+               : '<div class="thumbs"></div>'}`;
+    row.querySelector('.t').textContent = label;
+    row.querySelector('.s').textContent = sub;
+    const th = row.querySelector('.thumbs');
+    if (th) for (const c of items.slice(-3)) if (c.thumb) { const im = new Image(); im.src = c.thumb; th.appendChild(im); }
+    if (!future) row.addEventListener('click', () => openDay(k));
+    if (isToday) todayRow = row;
+    list.appendChild(row);
+  }
+  const foot = document.createElement('div');
+  foot.className = 'storage';
+  list.appendChild(foot);
+  if (navigator.storage?.estimate) navigator.storage.estimate().then(e => {
+    foot.textContent = `${(e.usage / 1e6).toFixed(0)} MB used on this phone`;
+  }).catch(() => {});
+  if (todayRow) todayRow.scrollIntoView({ block: 'center' });
+}
+$('calToCam').addEventListener('click', () => show('camera'));
+
+/* ================= Day view ================= */
+let currentDay = null, dayClips = [], dayUrls = new Map();
+function releaseUrls() { for (const u of dayUrls.values()) URL.revokeObjectURL(u); dayUrls.clear(); }
+
+function groupActivities(clips) {
+  const map = new Map();
+  for (const c of clips) {
+    const a = c.activityId || c.id;
+    if (!map.has(a)) map.set(a, []);
+    map.get(a).push(c);
+  }
+  return [...map.values()];
+}
+
+async function openDay(k) {
+  show('day');
+  currentDay = k;
+  releaseUrls();
+  const d = keyToDate(k);
+  const isToday = k === dateKey();
+  $('dayTitle').textContent = isToday ? 'Today' : fmtShort(d);
+  $('dayRecord').classList.toggle('hidden', !isToday);
+  dayClips = groupActivities(await clipsFor(k)).flat();
+  // Prepare playable URLs up front so "Make video" can start instantly on tap (iOS needs that).
+  for (const c of dayClips) {
+    const b = await blobFor(c.id);
+    if (b) dayUrls.set(c.id, URL.createObjectURL(b));
+  }
+  renderDay();
+}
+function renderDay() {
+  const box = $('dayContent');
+  box.innerHTML = '';
+  $('exportBtn').disabled = !dayClips.length;
+  if (!dayClips.length) {
+    box.innerHTML = `<div class="empty-msg">${currentDay === dateKey() ? 'No clips yet today.<br>Tap Record to capture your first moment.' : 'Nothing was recorded this day.'}</div>`;
+    return;
+  }
+  const total = dayClips.reduce((s, c) => s + c.duration, 0);
+  const head = document.createElement('div');
+  head.className = 'activity';
+  head.innerHTML = `<div class="note"></div>`;
+  head.firstChild.textContent = `${fmtLong(keyToDate(currentDay))} · ${dayClips.length} clips · ${fmtDur(total)}`;
+  box.appendChild(head);
+  groupActivities(dayClips).forEach((g, i) => {
+    const sec = document.createElement('div');
+    sec.className = 'activity';
+    sec.innerHTML = `<h2></h2><div class="grid"></div>`;
+    sec.querySelector('h2').textContent = `Activity ${i + 1} · ${fmtTime(g[0].createdAt)}`;
+    const grid = sec.querySelector('.grid');
+    for (const c of g) {
+      const el = document.createElement('button');
+      el.className = 'clip';
+      el.innerHTML = `${c.thumb ? `<img src="${c.thumb}" alt="">` : ''}<span class="dur">${fmtDur(c.duration)}</span>`;
+      el.addEventListener('click', () => openPlayer(c));
+      grid.appendChild(el);
+    }
+    box.appendChild(sec);
+  });
+}
+$('dayBack').addEventListener('click', () => { releaseUrls(); openCalendar(); });
+$('dayRecord').addEventListener('click', () => { releaseUrls(); show('camera'); });
+
+/* ================= Clip player ================= */
+let playing = null;
+function openPlayer(c) {
+  playing = c;
+  const v = $('playerVideo');
+  v.src = dayUrls.get(c.id) || '';
+  $('playerInfo').textContent = `${fmtTime(c.createdAt)} · ${fmtDur(c.duration)}`;
+  $('player').classList.remove('hidden');
+  v.play().catch(() => {});
+}
+function closePlayer() { const v = $('playerVideo'); v.pause(); v.removeAttribute('src'); v.load(); $('player').classList.add('hidden'); playing = null; }
+$('playerClose').addEventListener('click', closePlayer);
+$('playerDelete').addEventListener('click', async () => {
+  if (!playing || !confirm('Delete this clip? This can’t be undone.')) return;
+  const id = playing.id;
+  closePlayer();
+  await deleteClip(id);
+  const u = dayUrls.get(id); if (u) { URL.revokeObjectURL(u); dayUrls.delete(id); }
+  dayClips = dayClips.filter(c => c.id !== id);
+  renderDay(); updateBadge();
+});
+
+/* ================= Export (stitch clips into one video) ================= */
+// Plays each clip in order onto a canvas and records the canvas + audio.
+// Runs in real time, needs no server and no extra libraries.
+const srcV = $('exportSrc'), canvas = $('exportCanvas'), cx = canvas.getContext('2d');
+let actx = null, audioDest = null, exporting = null, resultFile = null, resultUrl = null, wakeLock = null;
+
+function ensureAudio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    actx = new AC();
+    const src = actx.createMediaElementSource(srcV);
+    audioDest = actx.createMediaStreamDestination();
+    src.connect(audioDest);
+  }
+  if (navigator.audioSession) { try { navigator.audioSession.type = 'playback'; } catch {} }
+  actx.resume();
+}
+
+function drawCover(v, W, H) {
+  const vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return;
+  const s = Math.max(W / vw, H / vh);
+  const dw = vw * s, dh = vh * s;
+  cx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+
+function waitEvent(el, ev) { return new Promise((res, rej) => {
+  const ok = () => { cleanup(); res(); }, bad = () => { cleanup(); rej(el.error || new Error(ev + ' failed')); };
+  const cleanup = () => { el.removeEventListener(ev, ok); el.removeEventListener('error', bad); };
+  el.addEventListener(ev, ok, { once: true }); el.addEventListener('error', bad, { once: true });
+}); }
+
+$('exportBtn').addEventListener('click', () => {
+  if (!dayClips.length || exporting) return;
+  const clips = dayClips.filter(c => dayUrls.has(c.id));
+  if (!clips.length) return;
+  // --- must happen synchronously inside the tap, or iPhone blocks sound ---
+  ensureAudio();
+  srcV.muted = false;
+  srcV.src = dayUrls.get(clips[0].id);
+  const primed = srcV.play().then(() => srcV.pause()).catch(() => {});
+  runExport(clips, primed);
+});
+
+async function runExport(clips, primed) {
+  const state = exporting = { cancelled: false };
+  $('exportOv').classList.remove('hidden');
+  $('exportWorking').classList.remove('hidden');
+  $('exportResult').classList.add('hidden');
+  $('exportDone').classList.add('hidden');
+  $('exportClose').textContent = 'Cancel';
+  $('exportTitle').textContent = 'Making your video';
+  $('exportBar').style.width = '0%';
+  $('exportStatus').textContent = 'Getting ready…';
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+
+  let raf = 0, rec = null;
+  try {
+    await primed;
+    if (srcV.readyState < 1) await waitEvent(srcV, 'loadedmetadata');
+    // Output size follows the first clip, capped at 1280 on the long side.
+    let W = srcV.videoWidth || 720, H = srcV.videoHeight || 1280;
+    const k = Math.min(1, 1280 / Math.max(W, H));
+    W = Math.round(W * k / 2) * 2; H = Math.round(H * k / 2) * 2;
+    canvas.width = W; canvas.height = H;
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+
+    const totalDur = clips.reduce((s, c) => s + c.duration, 0);
+    let doneDur = 0;
+    const startedAt = performance.now();
+    const title = fmtLong(keyToDate(clips[0].date));
+
+    const draw = () => {
+      if (srcV.readyState >= 2) drawCover(srcV, W, H);
+      // date caption over the first ~2.5 seconds
+      const t = (performance.now() - startedAt) / 1000;
+      if (t < 2.8) {
+        const a = t < 2.2 ? 1 : Math.max(0, 1 - (t - 2.2) / 0.6);
+        cx.save();
+        cx.globalAlpha = a;
+        const fs = Math.round(W * 0.065);
+        cx.font = `700 ${fs}px -apple-system, system-ui, sans-serif`;
+        cx.textAlign = 'center';
+        cx.shadowColor = 'rgba(0,0,0,.6)'; cx.shadowBlur = fs * 0.4;
+        cx.fillStyle = '#fff';
+        cx.fillText(title, W / 2, H * 0.12);
+        cx.restore();
+      }
+      const p = Math.min(1, (doneDur + (srcV.currentTime || 0)) / (totalDur || 1));
+      $('exportBar').style.width = (p * 100).toFixed(1) + '%';
+      raf = requestAnimationFrame(draw);
+    };
+
+    const vStream = canvas.captureStream(30);
+    const tracks = [...vStream.getVideoTracks(), ...audioDest.stream.getAudioTracks()];
+    const outStream = new MediaStream(tracks);
+    const mime = pickMime(['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']);
+    rec = new MediaRecorder(outStream, mime ? { mimeType: mime, videoBitsPerSecond: 5_000_000 } : undefined);
+    const outChunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) outChunks.push(e.data); };
+    const recStopped = new Promise(r => rec.onstop = r);
+
+    rec.start(1000);
+    draw();
+    for (let i = 0; i < clips.length; i++) {
+      if (state.cancelled || state.backgrounded) throw new Error('stopped');
+      $('exportStatus').textContent = `Clip ${i + 1} of ${clips.length}`;
+      if (i > 0) { srcV.src = dayUrls.get(clips[i].id); await waitEvent(srcV, 'loadeddata'); }
+      else srcV.currentTime = 0;
+      if (state.cancelled || state.backgrounded) throw new Error('stopped');
+      const ended = waitEvent(srcV, 'ended');
+      await srcV.play();
+      await Promise.race([ended, new Promise((_, rej) => state.reject = rej)]);
+      doneDur += clips[i].duration;
+    }
+    await new Promise(r => setTimeout(r, 150));
+    cancelAnimationFrame(raf);
+    rec.stop();
+    await recStopped;
+    vStream.getTracks().forEach(t => t.stop());
+
+    const type = (rec.mimeType || mime || 'video/mp4').split(';')[0];
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(outChunks, { type });
+    resultFile = new File([blob], `DITL-${clips[0].date}.${ext}`, { type });
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+    resultUrl = URL.createObjectURL(blob);
+
+    $('exportWorking').classList.add('hidden');
+    const rv = $('exportResult');
+    rv.src = resultUrl; rv.classList.remove('hidden');
+    $('exportDone').classList.remove('hidden');
+    $('exportClose').textContent = 'Done';
+    $('exportTitle').textContent = `${fmtShort(keyToDate(clips[0].date))} · ${fmtDur(totalDur)}`;
+  } catch (e) {
+    cancelAnimationFrame(raf);
+    try { if (rec && rec.state !== 'inactive') rec.stop(); } catch {}
+    srcV.pause();
+    if (!state.cancelled) {
+      console.error(e);
+      $('exportStatus').textContent = state.backgrounded
+        ? 'Stopped because the app was closed. Tap Cancel and try again, keeping the app open.'
+        : 'Something went wrong making the video. ' + (e && e.message ? e.message : '');
+      $('exportClose').textContent = 'Close';
+    } else {
+      $('exportOv').classList.add('hidden');
+    }
+  } finally {
+    exporting = null;
+    try { wakeLock && wakeLock.release(); } catch {} wakeLock = null;
+  }
+}
+function cancelExport(backgrounded) {
+  if (!exporting) return;
+  exporting.cancelled = !backgrounded;
+  exporting.backgrounded = !!backgrounded;
+  srcV.pause();
+  exporting.reject && exporting.reject(new Error('stopped'));
+}
+$('exportClose').addEventListener('click', () => {
+  if (exporting) { cancelExport(false); return; }
+  const rv = $('exportResult'); rv.pause();
+  $('exportOv').classList.add('hidden');
+});
+$('saveBtn').addEventListener('click', async () => {
+  if (!resultFile) return;
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [resultFile] })) {
+      await navigator.share({ files: [resultFile], title: resultFile.name });
+      return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a');
+  a.href = resultUrl; a.download = resultFile.name;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ================= App lifecycle ================= */
+// Closing/leaving the app stops & saves any recording and releases the camera.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (exporting) cancelExport(true);
+    stopRecording().then(() => { if (document.hidden) stopCamera(); });
+    if (!recorder) stopCamera();
+  } else {
+    updateDateLabel(); updateBadge();
+    if (!recorder) newSession();
+    if (screen === 'camera') startCamera();
+    else if (screen === 'calendar') openCalendar();
+  }
+});
+window.addEventListener('pagehide', () => { stopRecording(); });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+updateDateLabel();
+updateBadge();
+newSession();
+startCamera();
+})();
+</script>
+</body>
+</html>
