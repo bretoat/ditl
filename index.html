@@ -13,111 +13,138 @@
 <title>DITL</title>
 <style>
   :root {
-    --red: #ff3b30; --bg: #000; --panel: #141416; --row: #1c1c1f; --line: #2a2a2e;
-    --text: #f5f5f7; --dim: #8e8e93; --faint: #48484a;
+    --red: #ff3b30; --bg: #000; --row: #141416; --line: rgba(255,255,255,.08);
+    --text: #f5f5f7; --dim: #8e8e93; --faint: #4a4a4f; --gold: #e3cfa8;
+    --glass: rgba(20,20,22,.38); --hair: rgba(255,255,255,.16);
+    --sans: "Avenir Next", "Avenir", "Helvetica Neue", -apple-system, system-ui, sans-serif;
+    --serif: "Didot", "Bodoni 72", "Bodoni Moda", "Playfair Display", Georgia, serif;
+    --ease: cubic-bezier(.2,.8,.2,1);
     --st: env(safe-area-inset-top); --sb: env(safe-area-inset-bottom);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font: 16px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font: 500 16px/1.35 var(--sans); -webkit-font-smoothing: antialiased;
     overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   .hidden { display: none !important; }
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
   .screen.active { display: flex; }
+  .caps { text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; }
 
   /* ---------- Camera ---------- */
-  #camera { background: #000; }
-  #preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+  #camera { background: #000; touch-action: manipulation; }
+  #preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000;
+    transition: filter .35s var(--ease), opacity .35s var(--ease); }
   #preview.mirror { transform: scaleX(-1); }
-  .cam-top { position: absolute; top: 0; left: 0; right: 0; padding: calc(var(--st) + 14px) 16px 12px;
-    display: flex; justify-content: center; align-items: center; gap: 10px;
-    background: linear-gradient(rgba(0,0,0,.45), transparent); pointer-events: none; }
-  .pill { background: rgba(0,0,0,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 600; }
-  #recTimer { background: var(--red); font-variant-numeric: tabular-nums; }
+  #preview.flipping { filter: blur(22px) brightness(.8); opacity: .85; }
+  .cam-top { position: absolute; top: 0; left: 0; right: 0; height: calc(var(--st) + 72px);
+    padding: calc(var(--st) + 14px) 16px 0; display: flex; justify-content: center; align-items: flex-start; gap: 8px;
+    background: linear-gradient(rgba(0,0,0,.42), transparent); pointer-events: none; }
+  .pill { background: var(--glass); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: .5px solid var(--hair); padding: 7px 13px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+  #recTimer { display: flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; letter-spacing: .12em; }
+  #recTimer::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+    box-shadow: 0 0 8px var(--red); animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
   .cam-controls { position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 24px 28px calc(var(--sb) + 28px); display: flex; align-items: center; justify-content: space-between;
-    background: linear-gradient(transparent, rgba(0,0,0,.5)); }
-  .icon-btn { width: 52px; height: 52px; border-radius: 50%; background: rgba(0,0,0,.4);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    display: grid; place-items: center; position: relative; }
-  .icon-btn svg { width: 26px; height: 26px; }
-  .flip { position: absolute; right: 16px; top: calc(var(--st) + 6px); pointer-events: auto; width: 44px; height: 44px; }
-  .flip svg { width: 22px; height: 22px; }
-  .act-btn { width: 64px; height: 64px; border-radius: 18px; background: rgba(0,0,0,.4);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; border: 2px solid transparent; }
-  .act-btn .act-ic { font-size: 22px; line-height: 1; font-weight: 400; }
-  .act-btn.same { border-color: #fff; background: rgba(255,255,255,.18); }
-  .act-btn.off { visibility: hidden; }
-  .badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 6px;
-    border-radius: 10px; background: var(--red); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
-  .rec-btn { width: 80px; height: 80px; border-radius: 50%; border: 5px solid #fff; display: grid; place-items: center; }
-  .rec-btn span { width: 62px; height: 62px; border-radius: 50%; background: var(--red);
-    transition: all .18s ease; }
-  .rec-btn.recording span { width: 30px; height: 30px; border-radius: 7px; }
-  .rec-btn:active span { transform: scale(.92); }
+    padding: 40px 26px calc(var(--sb) + 26px); display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(transparent, rgba(0,0,0,.45)); }
+  .side { width: 72px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .side .caps { color: rgba(255,255,255,.85); text-shadow: 0 1px 6px rgba(0,0,0,.5); transition: color .3s; }
+  .glass-btn { width: 50px; height: 50px; border-radius: 50%; background: var(--glass);
+    backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: .5px solid var(--hair); display: grid; place-items: center; position: relative;
+    transition: transform .25s var(--ease), background .3s var(--ease), color .3s var(--ease); }
+  .glass-btn:active { transform: scale(.9); }
+  .glass-btn svg { width: 22px; height: 22px; stroke-width: 1.5; }
+  .flip { position: absolute; right: 16px; top: calc(var(--st) + 8px); pointer-events: auto; width: 40px; height: 40px; }
+  .flip svg { width: 19px; height: 19px; transition: transform .5s var(--ease); }
+  .flip.spin svg { transform: rotate(180deg); }
+  .act.off { visibility: hidden; }
+  .act.same .glass-btn { background: rgba(255,255,255,.94); color: #000; border-color: transparent; }
+  .act.same .caps { color: #fff; }
+  .badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: var(--red); font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
+    box-shadow: 0 2px 8px rgba(255,59,48,.45); }
+
+  /* record button */
+  .rec-btn { width: 84px; height: 84px; border-radius: 50%; position: relative; display: grid; place-items: center; }
+  .rec-btn .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(255,255,255,.96);
+    box-shadow: 0 6px 28px rgba(0,0,0,.35), inset 0 0 0 .5px rgba(0,0,0,.2);
+    transition: transform .35s var(--ease), border-color .35s var(--ease); }
+  .rec-btn .core { width: 68px; height: 68px; border-radius: 50%;
+    background: radial-gradient(120% 120% at 32% 25%, #ff7a6e 0%, #ff3b30 38%, #d71f15 72%, #a9120a 100%);
+    box-shadow: inset 0 1px 1.5px rgba(255,255,255,.45), inset 0 -3px 8px rgba(0,0,0,.28), 0 0 0 .5px rgba(0,0,0,.25);
+    transition: width .38s var(--ease), height .38s var(--ease), border-radius .38s var(--ease), transform .2s var(--ease); }
+  .rec-btn:active .core { transform: scale(.92); }
+  .rec-btn.recording .core { width: 30px; height: 30px; border-radius: 8px; }
+  .rec-btn.recording .ring { transform: scale(1.06); border-color: rgba(255,255,255,.75); }
+  .rec-btn.recording::after { content: ""; position: absolute; inset: -6px; border-radius: 50%;
+    border: 1px solid rgba(255,59,48,.7); animation: halo 1.8s var(--ease) infinite; }
+  @keyframes halo { 0% { transform: scale(.94); opacity: .9; } 100% { transform: scale(1.2); opacity: 0; } }
+
   .cam-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 32px; text-align: center; }
   .cam-msg div { max-width: 300px; }
-  .cam-msg button { margin-top: 16px; background: #fff; color: #000; padding: 10px 18px; border-radius: 999px; font-weight: 600; }
-  .toast { position: absolute; left: 50%; bottom: calc(var(--sb) + 140px); transform: translate(-50%, 10px);
-    opacity: 0; transition: all .25s; pointer-events: none; white-space: nowrap; }
+  .cam-msg button { margin-top: 18px; background: #fff; color: #000; padding: 12px 22px; border-radius: 999px; }
+  .toast { position: absolute; left: 50%; bottom: calc(var(--sb) + 150px); transform: translate(-50%, 10px);
+    opacity: 0; transition: all .3s var(--ease); pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .install-tip { position: absolute; top: calc(var(--st) + 56px); left: 16px; right: 16px;
-    background: rgba(28,28,31,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: 14px; padding: 12px 40px 12px 14px; font-size: 14px; color: #ddd; }
-  .install-tip b { color: #fff; }
-  .install-tip button { position: absolute; top: 8px; right: 10px; font-size: 20px; color: var(--dim); }
+  .install-tip { position: absolute; top: calc(var(--st) + 60px); left: 16px; right: 16px;
+    background: rgba(20,20,22,.85); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: .5px solid var(--hair); border-radius: 16px; padding: 14px 40px 14px 16px; font-size: 14px; color: #ccc; }
+  .install-tip b { color: #fff; font-weight: 600; }
+  .install-tip button { position: absolute; top: 10px; right: 12px; font-size: 20px; color: var(--dim); }
 
   /* ---------- Lists ---------- */
-  header { padding: calc(var(--st) + 10px) 16px 10px; display: flex; align-items: center; gap: 12px;
-    background: rgba(0,0,0,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--line); flex-shrink: 0; }
-  header h1 { margin: 0; font-size: 20px; flex: 1; }
-  .hdr-btn { color: var(--red); font-weight: 600; font-size: 16px; padding: 6px 2px; }
-  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--sb) + 24px); }
-  .day-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
-  .day-row .num { width: 46px; text-align: center; flex-shrink: 0; }
-  .day-row .num small { display: block; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
-  .day-row .num strong { font-size: 24px; font-weight: 700; }
+  header { padding: calc(var(--st) + 12px) 20px 14px; display: flex; align-items: baseline; gap: 12px;
+    background: rgba(0,0,0,.82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-bottom: .5px solid var(--line); flex-shrink: 0; }
+  header h1 { margin: 0; font: 400 30px/1.1 var(--serif); flex: 1; letter-spacing: .01em; }
+  .hdr-btn { color: var(--gold); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; font-weight: 600; padding: 6px 2px; }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; padding-bottom: calc(var(--sb) + 24px); }
+  .day-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: .5px solid var(--line); width: 100%; text-align: left; }
+  .day-row .num { width: 44px; text-align: center; flex-shrink: 0; }
+  .day-row .num small { display: block; font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .2em; font-weight: 600; }
+  .day-row .num strong { font: 400 30px/1.1 var(--serif); }
   .day-row .info { flex: 1; min-width: 0; }
-  .day-row .info .t { font-weight: 600; }
-  .day-row .info .s { color: var(--dim); font-size: 14px; }
+  .day-row .info .t { font-weight: 600; font-size: 15px; }
+  .day-row .info .s { color: var(--dim); font-size: 13px; margin-top: 2px; }
   .day-row .thumbs { display: flex; }
-  .day-row .thumbs img { width: 34px; height: 46px; object-fit: cover; border-radius: 6px; border: 2px solid var(--bg); margin-left: -10px; background: var(--row); }
-  .day-row.today { background: #1a0b0a; }
-  .day-row.today .num strong { color: var(--red); }
-  .day-row.locked { opacity: .35; pointer-events: none; }
+  .day-row .thumbs img { width: 32px; height: 44px; object-fit: cover; border-radius: 7px; border: 1.5px solid var(--bg); margin-left: -10px; background: var(--row); }
+  .day-row.today { background: linear-gradient(90deg, rgba(227,207,168,.10), transparent 70%); }
+  .day-row.today .num strong, .day-row.today .info .t { color: var(--gold); }
+  .day-row.locked { opacity: .3; pointer-events: none; }
   .day-row.empty .info .s { color: var(--faint); }
-  .lock svg { width: 18px; height: 18px; color: var(--dim); }
-  .storage { text-align: center; color: var(--faint); font-size: 13px; padding: 18px; }
+  .lock svg { width: 16px; height: 16px; color: var(--dim); stroke-width: 1.5; }
+  .storage { text-align: center; color: var(--faint); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; padding: 20px; }
 
-  .activity { padding: 16px 16px 4px; }
-  .activity h2 { font-size: 15px; margin: 0 0 10px; color: var(--dim); font-weight: 600; }
+  .activity { padding: 18px 16px 4px; }
+  .activity h2 { margin: 0 0 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .18em; font-size: 10.5px; font-weight: 600; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .clip { position: relative; aspect-ratio: 9/16; border-radius: 10px; overflow: hidden; background: var(--row); }
+  .clip { position: relative; aspect-ratio: 9/16; border-radius: 12px; overflow: hidden; background: var(--row); }
   .clip img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .clip .dur { position: absolute; right: 6px; bottom: 6px; font-size: 12px; font-weight: 700;
-    background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 6px; }
-  .empty-msg { color: var(--dim); text-align: center; padding: 60px 24px; }
+  .clip .dur { position: absolute; right: 6px; bottom: 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 3px 7px; border-radius: 7px; }
+  .empty-msg { color: var(--dim); text-align: center; padding: 70px 24px; font: italic 400 20px/1.4 var(--serif); }
   .day-actions { flex-shrink: 0; display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px);
-    border-top: 1px solid var(--line); background: #000; }
-  .btn { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; text-align: center; background: var(--row); }
-  .btn.primary { background: var(--red); color: #fff; }
-  .btn:disabled { opacity: .35; }
+    border-top: .5px solid var(--line); background: #000; }
+  .btn { flex: 1; padding: 16px; border-radius: 16px; text-align: center; border: .5px solid var(--hair);
+    text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 600; }
+  .btn.primary { background: #fff; color: #000; border-color: #fff; }
+  .btn:disabled { opacity: .3; }
 
   /* ---------- Overlays ---------- */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.96); z-index: 10; display: flex; flex-direction: column; }
+  .overlay { position: fixed; inset: 0; background: #000; z-index: 10; display: flex; flex-direction: column; }
   .overlay video { flex: 1; width: 100%; min-height: 0; object-fit: contain; background: #000; }
   .ov-bar { display: flex; gap: 10px; padding: 12px 16px calc(var(--sb) + 14px); }
-  .ov-top { padding: calc(var(--st) + 12px) 16px 8px; display: flex; justify-content: space-between; align-items: center; }
-  .export-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 14px; }
-  .progress { width: 80%; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
-  .progress div { height: 100%; width: 0; background: var(--red); transition: width .2s linear; }
-  #exportCanvas { max-width: 60%; max-height: 50vh; border-radius: 12px; background: #111; }
-  .note { color: var(--dim); font-size: 14px; }
+  .ov-top { padding: calc(var(--st) + 14px) 20px 10px; display: flex; justify-content: space-between; align-items: center; }
+  .export-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 16px; }
+  .progress { width: 70%; height: 2px; border-radius: 1px; background: var(--line); overflow: hidden; }
+  .progress div { height: 100%; width: 0; background: var(--gold); transition: width .2s linear; }
+  #exportCanvas { max-width: 60%; max-height: 50vh; border-radius: 14px; background: #111; }
+  #exportStatus { font: italic 400 20px var(--serif); }
+  .note { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -128,8 +155,8 @@
   <div class="cam-top">
     <div id="dateLabel" class="pill"></div>
     <div id="recTimer" class="pill hidden">0:00</div>
-    <button id="flipBtn" class="icon-btn flip" aria-label="Flip camera">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3l-2-3H9L7 7H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z"/><path d="M9 13a3 3 0 0 1 5.2-2M15 13a3 3 0 0 1-5.2 2M14.5 9.5v1.7h-1.7M9.5 16.5v-1.7h1.7"/></svg>
+    <button id="flipBtn" class="glass-btn flip" aria-label="Flip camera">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5A7.6 7.6 0 0 1 18 7.2L19.8 9"/><path d="M19.8 4.6V9h-4.4"/><path d="M19.5 13.5A7.6 7.6 0 0 1 6 16.8L4.2 15"/><path d="M4.2 19.4V15h4.4"/></svg>
     </button>
   </div>
   <div id="installTip" class="install-tip hidden">
@@ -139,14 +166,21 @@
   <div id="camMsg" class="cam-msg hidden"><div><div id="camMsgText"></div><button id="camRetry">Turn on camera</button></div></div>
   <div id="toast" class="toast pill"></div>
   <div class="cam-controls">
-    <button id="toCalendar" class="icon-btn" aria-label="Your days">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-      <span id="todayBadge" class="badge hidden">0</span>
-    </button>
-    <button id="recBtn" class="rec-btn" aria-label="Record"><span></span></button>
-    <button id="actBtn" class="act-btn" aria-label="Activity">
-      <span class="act-ic" id="actIcon">+</span><span id="actLabel">New</span>
-    </button>
+    <div class="side">
+      <button id="toCalendar" class="glass-btn" aria-label="Your days">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 9.8h17M8 3v3.6M16 3v3.6"/><circle cx="8.5" cy="14.5" r=".6" fill="currentColor"/></svg>
+        <span id="todayBadge" class="badge hidden">0</span>
+      </button>
+      <span class="caps">Days</span>
+    </div>
+    <button id="recBtn" class="rec-btn" aria-label="Record"><span class="ring"></span><span class="core"></span></button>
+    <div id="actWrap" class="side act">
+      <button id="actBtn" class="glass-btn" aria-label="Activity">
+        <svg id="icNew" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 13a7.5 7.5 0 1 1-8-7.48"/><path d="M18 2.8v6.4M14.8 6h6.4"/></svg>
+        <svg id="icSame" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 13.8a4 4 0 0 0 5.66 0l3.1-3.1a4 4 0 0 0-5.66-5.66l-1.2 1.2"/><path d="M13.8 10.2a4 4 0 0 0-5.66 0l-3.1 3.1a4 4 0 0 0 5.66 5.66l1.2-1.2"/></svg>
+      </button>
+      <span id="actLabel" class="caps">New</span>
+    </div>
   </div>
 </section>
 
@@ -175,7 +209,7 @@
 
 <!-- EXPORT -->
 <div id="exportOv" class="overlay hidden">
-  <div class="ov-top"><span class="note" id="exportTitle">Making your video</span><button id="exportClose" class="hdr-btn">Cancel</button></div>
+  <div class="ov-top"><span class="note" id="exportTitle">Making your film</span><button id="exportClose" class="hdr-btn">Cancel</button></div>
   <div id="exportWorking" class="export-body">
     <canvas id="exportCanvas"></canvas>
     <div class="progress"><div id="exportBar"></div></div>
@@ -186,14 +220,15 @@
   <div id="exportDone" class="ov-bar hidden"><button id="saveBtn" class="btn primary">Save to Camera Roll</button></div>
 </div>
 
-<!-- hidden element used to play clips during export -->
+<!-- hidden helpers: recording canvas + export player -->
+<canvas id="recCanvas" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px"></canvas>
 <video id="exportSrc" playsinline style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px"></video>
 
 <script>
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const FUTURE_DAYS = 7;
+const FUTURE_DAYS = 14;
 const MIN_PAST_DAYS = 6;
 
 /* ================= Dates ================= */
@@ -267,8 +302,10 @@ function show(name) {
 }
 
 /* ================= Camera + recording ================= */
-const preview = $('preview'), recBtn = $('recBtn');
-let stream = null, facing = 'user', recorder = null, chunks = [], recStart = 0, recThumb = '', timerInt = null, starting = null;
+// The camera feed is drawn onto a canvas and the canvas is recorded.
+// That way the camera can be switched front <-> back mid-recording and it all stays one clip.
+const preview = $('preview'), recBtn = $('recBtn'), recCanvas = $('recCanvas'), rcx = recCanvas.getContext('2d');
+let stream = null, facing = 'user', recorder = null, chunks = [], recStart = 0, recThumb = '', timerInt = null, starting = null, flipping = false, recRaf = 0;
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
@@ -278,10 +315,19 @@ function pickMime(cands) {
   return cands.find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 const CLIP_MIMES = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+const videoConstraints = () => ({ facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } });
+const AUDIO = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 };
 
 function camMsg(text) {
   $('camMsgText').textContent = text;
   $('camMsg').classList.toggle('hidden', !text);
+}
+function isRecording() { return !!(recorder && recorder.state === 'recording'); }
+
+async function attachPreview() {
+  preview.srcObject = stream;
+  preview.classList.toggle('mirror', facing === 'user');
+  await preview.play().catch(() => {});
 }
 
 async function startCamera() {
@@ -292,28 +338,62 @@ async function startCamera() {
   }
   starting = (async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-        audio: { echoCancellation: true, noiseSuppression: true }
-      });
+      const s = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: AUDIO });
       if (screen !== 'camera' || document.hidden) { s.getTracks().forEach(t => t.stop()); return; }
       stream = s;
-      preview.srcObject = s;
-      preview.classList.toggle('mirror', facing === 'user');
-      await preview.play().catch(() => {});
+      await attachPreview();
       camMsg('');
     } catch (e) {
       console.warn(e);
       camMsg(e && e.name === 'NotAllowedError'
-        ? 'DITL needs your camera and microphone. Tap below, then choose Allow. (If nothing happens: Settings → Safari → Camera & Microphone → Allow.)'
+        ? 'DITL needs your camera and microphone. Tap below, then choose Allow.'
         : 'Couldn’t start the camera. ' + (e && e.message ? e.message : ''));
     } finally { starting = null; }
   })();
   return starting;
 }
 function stopCamera() {
-  if (recorder && recorder.state === 'recording') return; // never kill an active recording here
+  if (isRecording()) return; // never kill an active recording here
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; preview.srcObject = null; }
+}
+
+// Swap only the video track; the microphone (and any recording) keeps running.
+async function flipCamera() {
+  if (flipping) return;
+  flipping = true;
+  const prev = facing;
+  facing = facing === 'user' ? 'environment' : 'user';
+  preview.classList.add('flipping');
+  $('flipBtn').classList.toggle('spin');
+  try {
+    if (!stream) { await startCamera(); return; }
+    const audio = stream.getAudioTracks();
+    stream.getVideoTracks().forEach(t => t.stop());
+    const vs = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: false });
+    stream = new MediaStream([...vs.getVideoTracks(), ...audio]);
+    await attachPreview();
+    await new Promise(r => setTimeout(r, 120));
+  } catch (e) {
+    console.warn(e);
+    facing = prev;
+    try {
+      const vs = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: false });
+      stream = new MediaStream([...vs.getVideoTracks(), ...(stream ? stream.getAudioTracks() : [])]);
+      await attachPreview();
+    } catch {}
+    toast('Couldn’t switch camera');
+  } finally {
+    preview.classList.remove('flipping');
+    flipping = false;
+  }
+}
+
+function drawCover(ctx, v, W, H) {
+  const vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return;
+  const s = Math.max(W / vw, H / vh);
+  const dw = vw * s, dh = vh * s;
+  ctx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
 }
 
 function grabThumb() {
@@ -323,15 +403,31 @@ function grabThumb() {
   const scale = 240 / Math.max(w, h);
   c.width = Math.round(w * scale); c.height = Math.round(h * scale);
   c.getContext('2d').drawImage(preview, 0, 0, c.width, c.height);
-  try { return c.toDataURL('image/jpeg', 0.7); } catch { return ''; }
+  try { return c.toDataURL('image/jpeg', 0.75); } catch { return ''; }
 }
 
 function startRecording() {
-  if (!stream) { startCamera(); return; }
+  if (!stream || flipping) { if (!stream) startCamera(); return; }
+  // Frame size is fixed from the camera at the moment recording starts (max 1920 on the long side).
+  let W = preview.videoWidth || 1080, H = preview.videoHeight || 1920;
+  const k = Math.min(1, 1920 / Math.max(W, H));
+  W = Math.round(W * k / 2) * 2; H = Math.round(H * k / 2) * 2;
+  recCanvas.width = W; recCanvas.height = H;
+  rcx.imageSmoothingEnabled = true; rcx.imageSmoothingQuality = 'high';
+  rcx.fillStyle = '#000'; rcx.fillRect(0, 0, W, H);
+  drawCover(rcx, preview, W, H);
+  const loop = () => {
+    if (!flipping && preview.readyState >= 2) drawCover(rcx, preview, W, H);
+    recRaf = requestAnimationFrame(loop);
+  };
+  loop();
+  const canvasStream = recCanvas.captureStream(30);
+  const recStream = new MediaStream([...canvasStream.getVideoTracks(), ...stream.getAudioTracks()]);
+
   const mime = pickMime(CLIP_MIMES);
   try {
-    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 3_000_000 } : undefined);
-  } catch (e) { recorder = new MediaRecorder(stream); }
+    recorder = new MediaRecorder(recStream, mime ? { mimeType: mime, videoBitsPerSecond: 10_000_000, audioBitsPerSecond: 192_000 } : undefined);
+  } catch (e) { recorder = new MediaRecorder(recStream); }
   chunks = [];
   recThumb = grabThumb();
   recStart = Date.now();
@@ -340,6 +436,8 @@ function startRecording() {
   const r = recorder;
   r.stopped = new Promise(resolve => {
     r.onstop = async () => {
+      cancelAnimationFrame(recRaf);
+      canvasStream.getTracks().forEach(t => t.stop());
       const duration = (Date.now() - recStart) / 1000;
       const type = (r.mimeType || mime || 'video/mp4').split(';')[0];
       const blob = new Blob(chunks, { type });
@@ -354,7 +452,7 @@ function startRecording() {
           const n = (await clipsFor(dateKey())).length;
           toast(`Saved · ${n} clip${n === 1 ? '' : 's'} today`);
           updateBadge();
-        } catch (e) { console.error(e); toast('Couldn’t save clip (storage full?)'); }
+        } catch (e) { console.error(e); toast('Couldn’t save clip'); }
       }
       resolve();
     };
@@ -362,28 +460,33 @@ function startRecording() {
   recorder.start(1000);
   recBtn.classList.add('recording');
   $('recTimer').classList.remove('hidden');
+  $('dateLabel').classList.add('hidden');
   $('recTimer').textContent = '0:00';
   timerInt = setInterval(() => { $('recTimer').textContent = fmtDur((Date.now() - recStart) / 1000); }, 250);
 }
 function stopRecording() {
-  if (!recorder || recorder.state !== 'recording') return Promise.resolve();
+  if (!isRecording()) return Promise.resolve();
   const r = recorder;
   clearInterval(timerInt);
   recBtn.classList.remove('recording');
   $('recTimer').classList.add('hidden');
+  $('dateLabel').classList.remove('hidden');
   r.stop();
   return r.stopped.finally(() => { if (recorder === r) recorder = null; });
 }
 
-recBtn.addEventListener('click', () => {
-  if (recorder && recorder.state === 'recording') stopRecording();
-  else startRecording();
+recBtn.addEventListener('click', () => { if (isRecording()) stopRecording(); else startRecording(); });
+$('flipBtn').addEventListener('click', flipCamera);
+
+// Double-tap anywhere on the camera view flips the camera (works while recording too).
+let lastTap = 0, lastTapX = 0, lastTapY = 0;
+$('camera').addEventListener('pointerup', e => {
+  if (e.target.closest('button, .install-tip, .cam-msg, .cam-controls')) return;
+  const now = Date.now();
+  if (now - lastTap < 320 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 40) { lastTap = 0; flipCamera(); }
+  else { lastTap = now; lastTapX = e.clientX; lastTapY = e.clientY; }
 });
-$('flipBtn').addEventListener('click', async () => {
-  if (recorder && recorder.state === 'recording') return;
-  facing = facing === 'user' ? 'environment' : 'user';
-  stopCamera(); await startCamera();
-});
+$('camera').addEventListener('dblclick', e => e.preventDefault());
 $('camRetry').addEventListener('click', () => { stopCamera(); startCamera(); });
 $('toCalendar').addEventListener('click', async () => { await stopRecording(); openCalendar(); });
 
@@ -413,11 +516,12 @@ async function newSession() {
 }
 function sessionActivityId() { return session.mode === 'same' && session.prevId ? session.prevId : session.newId; }
 function renderActBtn() {
-  const b = $('actBtn');
-  b.classList.toggle('off', !session.prevId);
-  b.classList.toggle('same', session.mode === 'same');
-  $('actIcon').textContent = session.mode === 'same' ? '\u21A9' : '+';
-  $('actLabel').textContent = session.mode === 'same' ? 'Same' : 'New';
+  const w = $('actWrap');
+  w.classList.toggle('off', !session.prevId);
+  w.classList.toggle('same', session.mode === 'same');
+  $('icNew').classList.toggle('hidden', session.mode === 'same');
+  $('icSame').classList.toggle('hidden', session.mode !== 'same');
+  $('actLabel').textContent = session.mode === 'same' ? 'Continue' : 'New';
 }
 $('actBtn').addEventListener('click', async () => {
   if (!session.prevId) return;
@@ -430,7 +534,7 @@ $('actBtn').addEventListener('click', async () => {
     mine.forEach(c => c.activityId = sessionActivityId());
     await updateMetas(mine);
   }
-  toast(session.mode === 'same' ? `Same activity as last time (Activity ${session.prevNum})` : `New activity (Activity ${session.newNum})`);
+  toast(session.mode === 'same' ? `Continuing activity ${session.prevNum}` : `New activity \u00b7 ${session.newNum}`);
 });
 
 let toastT;
@@ -463,8 +567,10 @@ async function openCalendar() {
 
   const list = $('dayList');
   list.innerHTML = '';
-  let todayRow;
-  for (let d = addDays(today, FUTURE_DAYS); d >= earliest; d = addDays(d, -1)) {
+  let todayRow, yesterdayRow;
+  const yesterdayK = dateKey(addDays(today, -1));
+  // Oldest at the top, today in the middle, locked future days below.
+  for (let d = new Date(earliest); d <= addDays(today, FUTURE_DAYS); d = addDays(d, 1)) {
     const k = dateKey(d);
     const items = (byDate[k] || []).sort((a, b) => a.createdAt - b.createdAt);
     const future = d > today, isToday = k === todayK;
@@ -484,6 +590,7 @@ async function openCalendar() {
     if (th) for (const c of items.slice(-3)) if (c.thumb) { const im = new Image(); im.src = c.thumb; th.appendChild(im); }
     if (!future) row.addEventListener('click', () => openDay(k));
     if (isToday) todayRow = row;
+    if (k === yesterdayK) yesterdayRow = row;
     list.appendChild(row);
   }
   const foot = document.createElement('div');
@@ -492,7 +599,12 @@ async function openCalendar() {
   if (navigator.storage?.estimate) navigator.storage.estimate().then(e => {
     foot.textContent = `${(e.usage / 1e6).toFixed(0)} MB used on this phone`;
   }).catch(() => {});
-  if (todayRow) todayRow.scrollIntoView({ block: 'center' });
+  // Open with yesterday as the top row (scroll up for older days).
+  if (yesterdayRow) {
+    const room = list.clientHeight - (list.scrollHeight - yesterdayRow.offsetTop);
+    if (room > 0) { const sp = document.createElement('div'); sp.style.height = room + 'px'; list.appendChild(sp); }
+    list.scrollTop = yesterdayRow.offsetTop;
+  }
 }
 $('calToCam').addEventListener('click', () => show('camera'));
 
@@ -538,7 +650,7 @@ function renderDay() {
   const head = document.createElement('div');
   head.className = 'activity';
   head.innerHTML = `<div class="note"></div>`;
-  head.firstChild.textContent = `${fmtLong(keyToDate(currentDay))} · ${dayClips.length} clips · ${fmtDur(total)}`;
+  head.firstChild.textContent = `${fmtLong(keyToDate(currentDay))} · ${dayClips.length} clip${dayClips.length === 1 ? '' : 's'} · ${fmtDur(total)}`;
   box.appendChild(head);
   groupActivities(dayClips).forEach((g, i) => {
     const sec = document.createElement('div');
@@ -599,13 +711,6 @@ function ensureAudio() {
   actx.resume();
 }
 
-function drawCover(v, W, H) {
-  const vw = v.videoWidth, vh = v.videoHeight;
-  if (!vw || !vh) return;
-  const s = Math.max(W / vw, H / vh);
-  const dw = vw * s, dh = vh * s;
-  cx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
-}
 
 function waitEvent(el, ev) { return new Promise((res, rej) => {
   const ok = () => { cleanup(); res(); }, bad = () => { cleanup(); rej(el.error || new Error(ev + ' failed')); };
@@ -641,34 +746,19 @@ async function runExport(clips, primed) {
   try {
     await primed;
     if (srcV.readyState < 1) await waitEvent(srcV, 'loadedmetadata');
-    // Output size follows the first clip, capped at 1280 on the long side.
+    // Output size follows the first clip, capped at 1920 on the long side.
     let W = srcV.videoWidth || 720, H = srcV.videoHeight || 1280;
-    const k = Math.min(1, 1280 / Math.max(W, H));
+    const k = Math.min(1, 1920 / Math.max(W, H));
     W = Math.round(W * k / 2) * 2; H = Math.round(H * k / 2) * 2;
     canvas.width = W; canvas.height = H;
     cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+    cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
 
     const totalDur = clips.reduce((s, c) => s + c.duration, 0);
     let doneDur = 0;
-    const startedAt = performance.now();
-    const title = fmtLong(keyToDate(clips[0].date));
 
     const draw = () => {
-      if (srcV.readyState >= 2) drawCover(srcV, W, H);
-      // date caption over the first ~2.5 seconds
-      const t = (performance.now() - startedAt) / 1000;
-      if (t < 2.8) {
-        const a = t < 2.2 ? 1 : Math.max(0, 1 - (t - 2.2) / 0.6);
-        cx.save();
-        cx.globalAlpha = a;
-        const fs = Math.round(W * 0.065);
-        cx.font = `700 ${fs}px -apple-system, system-ui, sans-serif`;
-        cx.textAlign = 'center';
-        cx.shadowColor = 'rgba(0,0,0,.6)'; cx.shadowBlur = fs * 0.4;
-        cx.fillStyle = '#fff';
-        cx.fillText(title, W / 2, H * 0.12);
-        cx.restore();
-      }
+      if (srcV.readyState >= 2) drawCover(cx, srcV, W, H);
       const p = Math.min(1, (doneDur + (srcV.currentTime || 0)) / (totalDur || 1));
       $('exportBar').style.width = (p * 100).toFixed(1) + '%';
       raf = requestAnimationFrame(draw);
@@ -678,7 +768,7 @@ async function runExport(clips, primed) {
     const tracks = [...vStream.getVideoTracks(), ...audioDest.stream.getAudioTracks()];
     const outStream = new MediaStream(tracks);
     const mime = pickMime(['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']);
-    rec = new MediaRecorder(outStream, mime ? { mimeType: mime, videoBitsPerSecond: 5_000_000 } : undefined);
+    rec = new MediaRecorder(outStream, mime ? { mimeType: mime, videoBitsPerSecond: 12_000_000, audioBitsPerSecond: 192_000 } : undefined);
     const outChunks = [];
     rec.ondataavailable = e => { if (e.data && e.data.size) outChunks.push(e.data); };
     const recStopped = new Promise(r => rec.onstop = r);
